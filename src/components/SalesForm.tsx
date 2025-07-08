@@ -44,7 +44,7 @@ export default function SalesForm({ onSaleComplete }: SalesFormProps) {
         </CardContent>
       </Card>
 
-      <CartSummary />
+      <CartSummary onSaleComplete={onSaleComplete} />
     </div>
   );
 }

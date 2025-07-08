@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/hooks/useAuth";
 import Navbar from "@/components/Navbar";
+import ToastProvider from "@/components/ToastProvider";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -23,6 +24,7 @@ export default function RootLayout({
           <div className="py-4 min-h-screen bg-gray-50">
             <Navbar />
             <main>{children}</main>
+            <ToastProvider />
           </div>
         </AuthProvider>
       </body>

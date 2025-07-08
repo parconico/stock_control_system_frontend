@@ -201,3 +201,22 @@ export const SIZE_OPTIONS = [
   { value: "XL", label: "XL" },
   { value: "XXL", label: "XXL" },
 ] as const;
+
+export interface StockMovement {
+  id: string;
+  productId: string;
+  product?: Product;
+  type: "IN" | "OUT" | "ADJUSTMENT";
+  quantity: number;
+  reason: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StockMovementFilters extends PaginationParams {
+  productId?: string;
+  type?: "IN" | "OUT" | "ADJUSTMENT";
+  startDate?: string;
+  endDate?: string;
+}

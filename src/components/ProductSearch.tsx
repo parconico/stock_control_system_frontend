@@ -106,11 +106,9 @@ export default function ProductSearch() {
                       className="flex items-center justify-between p-2 border rounded"
                     >
                       <div>
-                        <p className="font-medium text-sm">
-                          {product.model?.brand?.name} {product.model?.name}
-                        </p>
+                        <p className="font-medium text-sm">{product.name}</p>
                         <p className="text-xs text-muted-foreground">
-                          {product.name}
+                          {product.brand}
                         </p>
                         <p className="text-sm">Stock: {product.stock}</p>
                       </div>

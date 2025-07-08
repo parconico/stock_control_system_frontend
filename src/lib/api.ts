@@ -9,6 +9,8 @@ import {
   ProductFilters,
   Sale,
   SaleFilters,
+  StockMovement,
+  StockMovementFilters,
 } from "./types";
 
 //Configuracion base con axios
@@ -155,6 +157,51 @@ export const analyticsApi = {
     const response = await api.get("/analytics/sales-report", {
       params: { startDate, endDate },
     });
+    return response.data;
+  },
+};
+
+// API de Movimientos de Stock
+export const stockMovementsApi = {
+  getAll: async (
+    filters?: StockMovementFilters
+  ): Promise<ApiResponse<StockMovement[]>> => {
+    const response = await api.get("/stock-movements", { params: filters });
+    return response.data;
+  },
+
+  getById: async (id: string): Promise<StockMovement> => {
+    const response = await api.get(`/stock-movements/${id}`);
+    return response.data;
+  },
+
+  getByProduct: async (productId: string): Promise<StockMovement[]> => {
+    const response = await api.get(`/stock-movements/product/${productId}`);
+    return response.data;
+  },
+
+  getStockHistory: async (productId: string, days = 30) => {
+    const response = await api.get(
+      `/stock-movements/product/${productId}/history`,
+      { params: { days } }
+    );
+    return response.data;
+  },
+
+  getSummary: async (startDate?: string, endDate?: string) => {
+    const response = await api.get("/stock-movements/summary", {
+      params: { startDate, endDate },
+    });
+    return response.data;
+  },
+
+  create: async (data: {
+    productId: string;
+    type: "ENTRADA" | "SALIDA" | "AJUSTE";
+    quantity: number;
+    reason: string;
+  }): Promise<StockMovement> => {
+    const response = await api.post("/stock-movements", data);
     return response.data;
   },
 };

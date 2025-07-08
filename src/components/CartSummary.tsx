@@ -7,7 +7,11 @@ import { Badge } from "./ui/badge";
 import { formatCurrency } from "@/lib/utils";
 import { Button } from "./ui/button";
 
-export default function CartSummary() {
+interface CartSummaryProps {
+  onSaleComplete?: () => void;
+}
+
+export default function CartSummary({ onSaleComplete }: CartSummaryProps) {
   // Zustand
   const {
     cart,
@@ -26,6 +30,7 @@ export default function CartSummary() {
   const handleProcessCart = async () => {
     try {
       await processCart();
+      if (onSaleComplete) onSaleComplete();
     } catch (error) {
       console.error("Error al procesar carrito: ", error);
     }
@@ -62,11 +67,9 @@ export default function CartSummary() {
               className="flex items-center justify-between p-3 border rounded-lg"
             >
               <div className="flex-1">
-                <h4 className="font-medium text-sm">
-                  {item.product.model?.brand?.name} {item.product.model?.name}
-                </h4>
+                <h4 className="font-medium text-sm">{item.product.name}</h4>
                 <p className="text-xs text-muted-foreground">
-                  {item.product.name}
+                  {item.product.brand}
                 </p>
                 <p>{formatCurrency(item.product.price)}</p>
               </div>

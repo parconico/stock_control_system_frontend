@@ -17,6 +17,7 @@ import { Badge } from "./ui/badge";
 import ProductList from "./ProductList";
 import SalesForm from "./SalesForm";
 import AddProductForm from "./AddProductForm";
+import BarcodeScanner from "./BarcodeScanner";
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState("overview");
@@ -45,6 +46,11 @@ export default function Dashboard() {
   const handleProductAdded = () => {
     handleRefresh();
     setActiveTab("products");
+  };
+
+  const handleSaleAdded = () => {
+    handleRefresh();
+    setActiveTab("overview");
   };
 
   if (loading) {
@@ -209,8 +215,8 @@ export default function Dashboard() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {analytics?.topProducts.slice(0, 5).map((product, index) => (
+                <div className="space-y-4 max-h-96 overflow-y-auto p-4 bg-muted rounded-lg">
+                  {analytics?.topProducts.map((product, index) => (
                     <div
                       key={product.productId}
                       className="flex items-center justify-between"
@@ -273,9 +279,11 @@ export default function Dashboard() {
           <ProductList onRefresh={handleRefresh} />
         </TabsContent>
         <TabsContent value="sales">
-          <SalesForm onSaleComplete={handleRefresh} />
+          <SalesForm onSaleComplete={handleSaleAdded} />
         </TabsContent>
-        <TabsContent value="scanner"></TabsContent>
+        <TabsContent value="scanner">
+          <BarcodeScanner onSaleComplete={handleRefresh} />
+        </TabsContent>
         <TabsContent value="add-product">
           <AddProductForm onProductAdded={handleProductAdded} />
         </TabsContent>
