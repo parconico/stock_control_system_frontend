@@ -36,7 +36,7 @@ export function getStockStatus(
       className: "stock-low",
     };
   }
-  if (stock < minStock * 2) {
+  if (stock < minStock * 1) {
     return {
       status: "medium",
       label: "Stock Medio",

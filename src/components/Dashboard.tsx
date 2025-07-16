@@ -96,7 +96,7 @@ export default function Dashboard() {
 
       {/* Metricas principales */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
+        <Card className="hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Ventas {analytics?.periodLabel}
@@ -125,7 +125,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Ingresos {analytics?.periodLabel}
@@ -154,10 +154,10 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className=" hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Stock Bajo</CardTitle>
-            <AlertTriangle className=" h-4 w-4 text-muted-foreground" />
+            <AlertTriangle className=" h-4 w-4 text-red-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">
@@ -169,7 +169,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Productos Activos
@@ -195,11 +195,24 @@ export default function Dashboard() {
         className="space-y-4"
       >
         <TabsList className="grid w-full grid-cols-5 space-x-2">
-          <TabsTrigger value="overview">Resumen</TabsTrigger>
-          <TabsTrigger value="products">Productos</TabsTrigger>
-          <TabsTrigger value="sales">Ventas</TabsTrigger>
-          <TabsTrigger value="scanner">Scanner</TabsTrigger>
-          <TabsTrigger value="add-product">Agregar</TabsTrigger>
+          <TabsTrigger value="overview" className="flex items-center space-x-2">
+            Resumen
+          </TabsTrigger>
+          <TabsTrigger value="products" className="flex items-center space-x-2">
+            Productos
+          </TabsTrigger>
+          <TabsTrigger value="sales" className="flex items-center space-x-2">
+            Ventas
+          </TabsTrigger>
+          <TabsTrigger value="scanner" className="flex items-center space-x-2">
+            Scanner
+          </TabsTrigger>
+          <TabsTrigger
+            value="add-product"
+            className="flex items-center space-x-2"
+          >
+            Agregar
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
@@ -210,7 +223,7 @@ export default function Dashboard() {
             {/* Top productos */}
             <Card>
               <CardHeader>
-                <CardTitle>
+                <CardTitle className="flex items-center space-x-2">
                   Productos Mas Vendidos {analytics?.periodLabel}
                 </CardTitle>
               </CardHeader>
@@ -257,12 +270,9 @@ export default function Dashboard() {
                       className="flex items-center justify-between"
                     >
                       <div>
-                        <p className="font-medium">
-                          {product.model?.brand?.name} {product.model?.name}{" "}
-                          {product.name}
-                        </p>
+                        <p className="font-medium">{product.name}</p>
                         <p className="text-sm text-muted-foreground">
-                          Stock actual: {product.stock} | Minimo:{" "}
+                          Stock actual: {product.totalStock} | Minimo:{" "}
                           {product.minStock}
                         </p>
                       </div>

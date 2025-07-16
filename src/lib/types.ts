@@ -5,29 +5,24 @@ export interface Brand {
   createdAt: string;
   updatedAt: string;
   _count?: {
-    models: number;
+    products: number;
   };
 }
 
-export interface Model {
+export interface ProductVariant {
   id: string;
-  name: string;
-  description?: string;
-  brandId: string;
-  brand?: Brand;
+  productId: string;
+  size: string;
+  stock: number;
   createdAt: string;
   updatedAt: string;
-  _count?: {
-    products: number;
-  };
 }
 
 export interface Product {
   id: string;
   name: string;
-  modelId: string;
-  model?: Model;
-  brand: string;
+  brandId: string;
+  brand?: Brand;
   barcode: string;
   gender: "HOMBRE" | "MUJER";
   category:
@@ -47,6 +42,8 @@ export interface Product {
   stock: number;
   minStock: number;
   isActive: boolean;
+  variants?: ProductVariant[];
+  totalStock?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -87,10 +84,15 @@ export interface Analytics {
 
 // DTOs para requests
 // Actualizar CreateProductForm para que coincida
+
+export interface ProductVariantInput {
+  size: string;
+  stock: number;
+}
+
 export interface CreateProductForm {
   name: string;
-  // modelId: string;
-  brand: string;
+  brandId: string;
   barcode: string;
   gender: "HOMBRE" | "MUJER";
   category:
@@ -103,16 +105,16 @@ export interface CreateProductForm {
     | "BOTELLA"
     | "RINONERA"
     | "OTROS";
-  size?: string;
   color?: string;
   price: number;
   cost: number;
-  stock: number;
+  variants: ProductVariantInput[];
   minStock: number;
 }
 
 export interface CreateSaleForm {
   productId: string;
+  size?: string;
   quantity: number;
   unitPrice: number;
   totalPrice: number;
@@ -138,7 +140,7 @@ export interface PaginationParams {
 export interface ProductFilters extends PaginationParams {
   search?: string;
   brandId?: string;
-  modelId?: string;
+  // modelId?: string;
   gender?: "HOMBRE" | "MUJER";
   category?: string;
   minPrice?: number;
@@ -150,10 +152,18 @@ export interface ProductFilters extends PaginationParams {
 //Tipos para formulario
 export interface CreateSaleForm {
   productId: string;
+  size?: string;
   quantity: number;
   unitPrice: number;
   totalPrice: number;
   saleDate?: string;
+}
+
+export interface CreateUserForm {
+  email: string;
+  name: string;
+  password: string;
+  role: "ADMIN" | "EMPLOYEE";
 }
 
 export interface SaleFilters {
@@ -206,6 +216,7 @@ export interface StockMovement {
   id: string;
   productId: string;
   product?: Product;
+  size?: string;
   type: "IN" | "OUT" | "ADJUSTMENT";
   quantity: number;
   reason: string;

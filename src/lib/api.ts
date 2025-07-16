@@ -3,14 +3,17 @@ import Cookies from "js-cookie";
 import {
   Analytics,
   ApiResponse,
+  Brand,
   CreateProductForm,
   CreateSaleForm,
+  CreateUserForm,
   Product,
   ProductFilters,
   Sale,
   SaleFilters,
   StockMovement,
   StockMovementFilters,
+  User,
 } from "./types";
 
 //Configuracion base con axios
@@ -134,6 +137,40 @@ export const salesApi = {
   },
 };
 
+// API de Usuarios
+export const usersApi = {
+  getAll: async (): Promise<User[]> => {
+    const response = await api.get("/users");
+    return response.data;
+  },
+
+  getById: async (id: string): Promise<User> => {
+    const response = await api.get(`/users/${id}`);
+    return response.data;
+  },
+
+  create: async (data: CreateUserForm): Promise<User> => {
+    const response = await api.post("/users", data);
+    return response.data;
+  },
+
+  update: async (
+    id: string,
+    data: Partial<Omit<CreateUserForm, "password">>
+  ): Promise<User> => {
+    const response = await api.patch(`/users/${id}`, data);
+    return response.data;
+  },
+
+  delete: async (id: string): Promise<void> => {
+    await api.delete(`/users/${id}`);
+  },
+
+  changePassword: async (id: string, password: string): Promise<void> => {
+    await api.patch(`/users/${id}/password`, { password });
+  },
+};
+
 //API de Analytics
 export const analyticsApi = {
   getAnalytics: async (
@@ -158,6 +195,39 @@ export const analyticsApi = {
       params: { startDate, endDate },
     });
     return response.data;
+  },
+};
+
+// ✅ API de Marcas (simplificada)
+export const brandsApi = {
+  getAll: async (): Promise<Brand[]> => {
+    const response = await api.get("/brands");
+    return response.data;
+  },
+
+  getById: async (id: string): Promise<Brand> => {
+    const response = await api.get(`/brands/${id}`);
+    return response.data;
+  },
+
+  create: async (data: {
+    name: string;
+    description?: string;
+  }): Promise<Brand> => {
+    const response = await api.post("/brands", data);
+    return response.data;
+  },
+
+  update: async (
+    id: string,
+    data: { name?: string; description?: string }
+  ): Promise<Brand> => {
+    const response = await api.patch(`/brands/${id}`, data);
+    return response.data;
+  },
+
+  delete: async (id: string): Promise<void> => {
+    await api.delete(`/brands/${id}`);
   },
 };
 

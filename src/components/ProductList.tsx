@@ -45,7 +45,7 @@ export default function ProductList({ onRefresh }: ProductListProps) {
 
   useEffect(() => {
     fetchProducts();
-  }, [fetchProducts]);
+  }, [fetchProducts, filters]);
 
   useEffect(() => {
     if (error) {
@@ -79,13 +79,10 @@ export default function ProductList({ onRefresh }: ProductListProps) {
       const fields = [
         product.name?.toLowerCase() || "",
         product.barcode?.toLowerCase() || "",
-        product.model?.brand?.name?.toLowerCase() || "",
-        product.model?.name?.toLowerCase() || "",
+        product.brand?.name?.toLowerCase() || "", // ✅ Acceder a brand.name
         product.category?.toLowerCase() || "",
         product.color?.toLowerCase() || "",
-        product.size?.toLowerCase() || "",
       ];
-      // Cada palabra debe estar en al menos un campo
       return words.every((word) =>
         fields.some((field) => field.includes(word))
       );
@@ -111,6 +108,10 @@ export default function ProductList({ onRefresh }: ProductListProps) {
         <CardTitle className="flex items-center space-x-2">
           <Package className="h-5 w-5" />
           <span>Gestion de Productos</span>
+          {/* Mostrar contador de productos */}
+          <Badge variant="secondary" className="ml-2">
+            {filteredProducts.length} productos
+          </Badge>
         </CardTitle>
 
         {/* Filtros */}
@@ -185,8 +186,20 @@ export default function ProductList({ onRefresh }: ProductListProps) {
             </TableHeader>
             <TableBody>
               {filteredProducts.map((product) => {
+                // const totalStock =
+                //   product.variants?.reduce(
+                //     (sum, variant) => sum + variant.stock,
+                //     0
+                //   ) || 0;
+                const totalStock =
+                  product.totalStock ??
+                  product.variants?.reduce(
+                    (sum, variant) => sum + variant.stock,
+                    0
+                  ) ??
+                  0;
                 const stockStatus = getStockStatus(
-                  product.stock,
+                  totalStock,
                   product.minStock
                 );
                 return (
@@ -198,12 +211,11 @@ export default function ProductList({ onRefresh }: ProductListProps) {
                           {product.name}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          {product.size && ` ${product.size}`}{" "}
-                          {product.color && `- ${product.color}`}
+                          {product.color && `${product.color}`}
                         </p>
                       </div>
                     </TableCell>
-                    <TableCell>{product.brand}</TableCell>
+                    <TableCell>{product.brand?.name}</TableCell>
                     <TableCell className="font-mono">
                       {product.barcode}
                     </TableCell>
@@ -213,8 +225,23 @@ export default function ProductList({ onRefresh }: ProductListProps) {
                     <TableCell>{product.category}</TableCell>
                     <TableCell>${product.price.toLocaleString()}</TableCell>
                     <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {product.variants?.map((variant) => (
+                          <Badge
+                            key={variant.id}
+                            variant={
+                              variant.stock > 0 ? "default" : "secondary"
+                            }
+                            className="text-xs"
+                          >
+                            {variant.size}: {variant.stock}
+                          </Badge>
+                        ))}
+                      </div>
+                    </TableCell>
+                    <TableCell>
                       <span className={stockStatus.className}>
-                        {product.stock}
+                        {totalStock}
                       </span>
                       <span className="text-muted-foreground">
                         {" "}

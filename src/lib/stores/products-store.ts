@@ -39,6 +39,12 @@ interface ProductsActions {
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   clearError: () => void;
+  updateProductStock: (
+    id: string,
+    size: string | undefined,
+    quantity: number
+  ) => void;
+  resetProducts: () => void;
 }
 
 export const useProductsStore = create<ProductsState & ProductsActions>()(
@@ -52,11 +58,16 @@ export const useProductsStore = create<ProductsState & ProductsActions>()(
     meta: null,
 
     //Acciones
-    fetchProducts: async (filters?: ProductFilters) => {
+    fetchProducts: async (newFilters?: ProductFilters) => {
       set((state) => {
         state.loading = true;
         state.error = null;
-        if (filters) state.filters = { ...state.filters, ...filters };
+        // ✅ MODIFICADO: Si se proporcionan nuevos filtros, reemplazarlos completamente.
+        // Si newFilters es undefined, significa que queremos usar los filtros actuales del estado.
+        // Si newFilters es un objeto vacío {}, significa que queremos limpiar los filtros.
+        if (newFilters !== undefined) {
+          state.filters = newFilters;
+        }
       });
 
       try {
@@ -212,6 +223,25 @@ export const useProductsStore = create<ProductsState & ProductsActions>()(
       }
     },
 
+    // Nueva función para actualizar stock localmente por talla
+    updateProductStock: (
+      id: string,
+      size: string | undefined,
+      quantity: number
+    ) => {
+      set((state) => {
+        const product = state.products.find((p) => p.id === id);
+        if (product && product.variants) {
+          const variant = product.variants.find((v) => v.size === size);
+          if (variant) {
+            variant.stock += quantity;
+            // Evitar stock negativo
+            if (variant.stock < 0) variant.stock = 0;
+          }
+        }
+      });
+    },
+
     setFilters: (filters: Partial<ProductFilters>) => {
       set((state) => {
         state.filters = { ...state.filters, ...filters };
@@ -245,6 +275,15 @@ export const useProductsStore = create<ProductsState & ProductsActions>()(
     clearError: () => {
       set((state) => {
         state.error = null;
+      });
+    },
+    // ✅ Nueva acción para resetear la lista de productos
+    resetProducts: () => {
+      set((state) => {
+        state.products = [];
+        state.meta = null;
+        state.error = null;
+        state.loading = false;
       });
     },
   }))

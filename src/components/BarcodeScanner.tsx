@@ -1,9 +1,12 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
+
+import type React from "react";
 
 import { useProducts, useSales, useUI } from "@/hooks/useStores";
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Package, Scan, ShoppingCart } from "lucide-react";
+import { Package, Scan, ShoppingCart, AlertCircle } from "lucide-react";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
@@ -16,9 +19,10 @@ interface BarcodeScannerProps {
 export default function BarcodeScanner({
   onSaleComplete,
 }: BarcodeScannerProps) {
-  // ✅ useState solo para estado LOCAL del formulario
+  // ✅ useState para estado LOCAL del formulario
   const [barcode, setBarcode] = useState("");
   const [quantity, setQuantity] = useState(1);
+  const [selectedSize, setSelectedSize] = useState<string>("");
 
   // Zustand para estado global
   const {
@@ -36,10 +40,14 @@ export default function BarcodeScanner({
 
     try {
       const product = await fetchProductByBarcode(barcode);
+
+      // ✅ Limpiar selección de talla anterior
+      setSelectedSize("");
+
       addToast({
         type: "success",
         title: "Producto encontrado",
-        description: `${product.model?.brand?.name} ${product.model?.name} ${product.name}`,
+        description: `${product.brand?.name} ${product.name}`,
       });
     } catch (error: any) {
       addToast({
@@ -53,11 +61,45 @@ export default function BarcodeScanner({
   const handleSale = async () => {
     if (!selectedProduct || quantity <= 0) return;
 
-    if (quantity > selectedProduct.stock) {
+    // ✅ Calcular stock total y validar talla seleccionada
+    const totalStock =
+      selectedProduct.totalStock ||
+      selectedProduct.variants?.reduce(
+        (sum, variant) => sum + variant.stock,
+        0
+      ) ||
+      0;
+
+    // Si el producto tiene variantes, debe seleccionar una talla
+    if (
+      selectedProduct.variants &&
+      selectedProduct.variants.length > 0 &&
+      !selectedSize
+    ) {
+      addToast({
+        type: "error",
+        title: "Selecciona una talla",
+        description: "Debes seleccionar una talla antes de procesar la venta",
+      });
+      return;
+    }
+
+    // Validar stock de la talla específica si está seleccionada
+    let availableStock = totalStock;
+    if (selectedSize && selectedProduct.variants) {
+      const selectedVariant = selectedProduct.variants.find(
+        (v) => v.size === selectedSize
+      );
+      availableStock = selectedVariant?.stock || 0;
+    }
+
+    if (quantity > availableStock) {
       addToast({
         type: "error",
         title: "Stock insuficiente",
-        description: "No hay suficiente stock disponible",
+        description: `Solo hay ${availableStock} unidades disponibles${
+          selectedSize ? ` en talla ${selectedSize}` : ""
+        }`,
       });
       return;
     }
@@ -65,6 +107,7 @@ export default function BarcodeScanner({
     try {
       await createSale({
         productId: selectedProduct.id,
+        size: selectedSize || undefined,
         quantity,
         unitPrice: selectedProduct.price,
         totalPrice: selectedProduct.price * quantity,
@@ -73,15 +116,16 @@ export default function BarcodeScanner({
       addToast({
         type: "success",
         title: "Venta registrada",
-        description: `${quantity} x ${selectedProduct.name} - $${(
-          selectedProduct.price * quantity
-        ).toLocaleString()}`,
+        description: `${quantity} x ${selectedProduct.name}${
+          selectedSize ? ` (${selectedSize})` : ""
+        } - $${(selectedProduct.price * quantity).toLocaleString()}`,
       });
 
-      //Limpiar formulario
+      // Limpiar formulario
       setSelectedProduct(null);
       setBarcode("");
       setQuantity(1);
+      setSelectedSize("");
       onSaleComplete();
     } catch (error: any) {
       addToast({
@@ -100,19 +144,43 @@ export default function BarcodeScanner({
 
   const isLoading = productLoading || saleLoading;
 
+  // ✅ Calcular stock disponible para la talla seleccionada
+  const getAvailableStock = () => {
+    if (!selectedProduct) return 0;
+
+    const totalStock =
+      selectedProduct.totalStock ||
+      selectedProduct.variants?.reduce(
+        (sum, variant) => sum + variant.stock,
+        0
+      ) ||
+      0;
+
+    if (selectedSize && selectedProduct.variants) {
+      const selectedVariant = selectedProduct.variants.find(
+        (v) => v.size === selectedSize
+      );
+      return selectedVariant?.stock || 0;
+    }
+
+    return totalStock;
+  };
+
+  const availableStock = getAvailableStock();
+
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <Scan className="h-5 w-5" />
-            <span>Scanner de Codigo de Barras</span>
+            <span>Scanner de Código de Barras</span>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex space-x-2">
             <Input
-              placeholder="Escanee o ingrese el codigo de barras"
+              placeholder="Escanee o ingrese el código de barras"
               value={barcode}
               onChange={(e) => setBarcode(e.target.value)}
               onKeyUp={handleBarcodeKeyPress}
@@ -141,16 +209,14 @@ export default function BarcodeScanner({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <h3 className="font-semibold text-lg">
-                  {/* {selectedProduct.model?.brand?.name}{" "}  */}
                   {selectedProduct.name}
                 </h3>
-                <p className="text-muted-foreground">{selectedProduct.brand}</p>
+                <p className="text-muted-foreground">
+                  {selectedProduct.brand?.name}
+                </p>
                 <div className="flex space-x-2 mt-2">
                   <Badge variant="outline">{selectedProduct.gender}</Badge>
                   <Badge variant="outline">{selectedProduct.category}</Badge>
-                  {selectedProduct.size && (
-                    <Badge variant="outline">{selectedProduct.size}</Badge>
-                  )}
                   {selectedProduct.color && (
                     <Badge variant="outline">{selectedProduct.color}</Badge>
                   )}
@@ -163,7 +229,13 @@ export default function BarcodeScanner({
                   {selectedProduct.price.toLocaleString()}
                 </p>
                 <p>
-                  <strong>Stock disponible:</strong> {selectedProduct.stock}
+                  <strong>Stock total:</strong>{" "}
+                  {selectedProduct.totalStock ||
+                    selectedProduct.variants?.reduce(
+                      (sum, variant) => sum + variant.stock,
+                      0
+                    ) ||
+                    0}
                 </p>
                 <p>
                   <strong>Código:</strong>{" "}
@@ -171,6 +243,62 @@ export default function BarcodeScanner({
                 </p>
               </div>
             </div>
+
+            {/* ✅ Selector de tallas */}
+            {selectedProduct.variants &&
+              selectedProduct.variants.length > 0 && (
+                <div className="border-t pt-4 space-y-3">
+                  <Label className="text-sm font-medium">
+                    Seleccionar talla:
+                  </Label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                    {selectedProduct.variants
+                      .filter((variant) => variant.stock > 0)
+                      .map((variant) => (
+                        <Button
+                          key={variant.id}
+                          variant={
+                            selectedSize === variant.size
+                              ? "default"
+                              : "outline"
+                          }
+                          size="sm"
+                          onClick={() => setSelectedSize(variant.size)}
+                          className="flex flex-col h-auto py-2"
+                        >
+                          <span className="font-medium">{variant.size}</span>
+                          <span className="text-xs opacity-75">
+                            Stock: {variant.stock}
+                          </span>
+                        </Button>
+                      ))}
+                  </div>
+
+                  {selectedProduct.variants.filter((v) => v.stock > 0)
+                    .length === 0 && (
+                    <div className="flex items-center space-x-2 text-amber-600">
+                      <AlertCircle className="h-4 w-4" />
+                      <span className="text-sm">
+                        No hay tallas con stock disponible
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+            {/* ✅ Información de talla seleccionada */}
+            {selectedSize && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-blue-800">
+                    Talla seleccionada: {selectedSize}
+                  </span>
+                  <span className="text-sm text-blue-600">
+                    Stock disponible: {availableStock}
+                  </span>
+                </div>
+              </div>
+            )}
 
             <div className="border-t pt-4">
               <div className="flex items-center space-x-4">
@@ -182,7 +310,7 @@ export default function BarcodeScanner({
                     id="quantity"
                     type="number"
                     min="1"
-                    max={selectedProduct.stock}
+                    max={availableStock}
                     value={quantity}
                     onChange={(e) =>
                       setQuantity(Number.parseInt(e.target.value) || 1)
@@ -197,12 +325,16 @@ export default function BarcodeScanner({
                     {(selectedProduct.price * quantity).toLocaleString()}
                   </p>
                 </div>
+
                 <Button
                   onClick={handleSale}
                   disabled={
                     isLoading ||
                     quantity <= 0 ||
-                    quantity > selectedProduct.stock
+                    quantity > availableStock ||
+                    (selectedProduct.variants &&
+                      selectedProduct.variants.length > 0 &&
+                      !selectedSize)
                   }
                   className="flex items-center space-x-2"
                 >
@@ -212,6 +344,23 @@ export default function BarcodeScanner({
                   </span>
                 </Button>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ✅ Mensaje cuando no se encuentra producto */}
+      {productError && (
+        <Card>
+          <CardContent className="flex items-center justify-center py-8">
+            <div className="text-center">
+              <AlertCircle className="h-12 w-12 text-muted-foreground mb-4 mx-auto" />
+              <p className="text-muted-foreground">
+                No se encontró el producto: {barcode}
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Verifica el código de barras e intenta nuevamente
+              </p>
             </div>
           </CardContent>
         </Card>
