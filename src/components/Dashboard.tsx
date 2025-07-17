@@ -5,6 +5,7 @@ import {
   AlertTriangle,
   Calendar,
   CalendarDays,
+  CalendarIcon,
   Package,
   ShoppingCart,
   TrendingUp,
@@ -18,9 +19,16 @@ import ProductList from "./ProductList";
 import SalesForm from "./SalesForm";
 import AddProductForm from "./AddProductForm";
 import BarcodeScanner from "./BarcodeScanner";
+import { Button } from "./ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState("overview");
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
   // Zustand
   const {
     analytics,
@@ -28,19 +36,35 @@ export default function Dashboard() {
     selectedPeriod,
     fetchAnalytics,
     setSelectedPeriod,
+    selectedDate,
+    setSelectedDate,
   } = useAnalytics();
 
   useEffect(() => {
-    fetchAnalytics(selectedPeriod);
-  }, [selectedPeriod, fetchAnalytics]);
+    fetchAnalytics(selectedPeriod, selectedDate ?? undefined);
+  }, [selectedPeriod, selectedDate, fetchAnalytics]);
 
-  const handlePeriodChange = (period: "day" | "month") => {
+  const handlePeriodChange = (period: "day" | "month" | "custom") => {
     setSelectedPeriod(period);
-    fetchAnalytics(period);
+    if (period !== "custom") {
+      setSelectedDate(null);
+    }
+    fetchAnalytics(
+      period,
+      period === "custom" ? selectedDate ?? undefined : undefined
+    );
   };
 
+  const handleDateSelect = (date: Date | undefined) => {
+    if (date) {
+      setSelectedDate(date);
+      setSelectedPeriod("custom");
+      setDatePickerOpen(false);
+      fetchAnalytics("custom", date);
+    }
+  };
   const handleRefresh = () => {
-    fetchAnalytics(selectedPeriod);
+    fetchAnalytics(selectedPeriod, selectedDate ?? undefined);
   };
 
   const handleProductAdded = () => {
@@ -51,6 +75,17 @@ export default function Dashboard() {
   const handleSaleAdded = () => {
     handleRefresh();
     setActiveTab("overview");
+  };
+
+  // Función para deshabilitar fechas en el calendario
+  const isDateDisabled = (date: Date) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const compareDate = new Date(date);
+    compareDate.setHours(0, 0, 0, 0);
+
+    // Deshabilitar hoy y fechas futuras, y fechas muy antiguas
+    return compareDate >= today || date < new Date("1900-01-01");
   };
 
   if (loading) {
@@ -66,23 +101,23 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Selector de periodo */}
-      <div className="flex justify-center">
+      {/* Selector de período y fecha */}
+      <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
         <div className="inline-flex rounded-lg border bg-background p-1">
           <button
             onClick={() => handlePeriodChange("day")}
-            className={`inline-flex items-center justify-center rounded-md px-3 py-2 text-sm font-medium transition-all ${
+            className={`inline-flex items-center justify-center rounded-md px-3 py-2 text-sm font-medium transition-all cursor-pointer ${
               selectedPeriod === "day"
                 ? "bg-primary text-primary-foreground shadow-sm"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground"
             }`}
           >
             <CalendarDays className="mr-2 h-4 w-4" />
-            Hoy{" "}
+            Hoy
           </button>
           <button
             onClick={() => handlePeriodChange("month")}
-            className={`inline-flex items-center justify-center rounded-md px-3 py-2 text-sm font-medium transition-all ${
+            className={`inline-flex items-center justify-center rounded-md px-3 py-2 text-sm font-medium transition-all cursor-pointer ${
               selectedPeriod === "month"
                 ? "bg-primary text-primary-foreground shadow-sm"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -92,6 +127,38 @@ export default function Dashboard() {
             Este Mes
           </button>
         </div>
+
+        {/* Date Picker */}
+        <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant={selectedPeriod === "custom" ? "default" : "outline"}
+              className={cn(
+                "w-[240px] justify-start text-left font-normal cursor-pointer",
+                !selectedDate &&
+                  selectedPeriod === "custom" &&
+                  "text-muted-foreground"
+              )}
+            >
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {selectedDate && selectedPeriod === "custom" ? (
+                format(selectedDate, "PPP", { locale: es })
+              ) : (
+                <span>Seleccionar fecha específica</span>
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <CalendarComponent
+              mode="single"
+              selected={selectedDate || undefined}
+              onSelect={handleDateSelect}
+              disabled={isDateDisabled}
+              initialFocus
+              locale={es}
+            />
+          </PopoverContent>
+        </Popover>
       </div>
 
       {/* Metricas principales */}
@@ -195,21 +262,33 @@ export default function Dashboard() {
         className="space-y-4"
       >
         <TabsList className="grid w-full grid-cols-5 space-x-2">
-          <TabsTrigger value="overview" className="flex items-center space-x-2">
+          <TabsTrigger
+            value="overview"
+            className="flex items-center space-x-2 cursor-pointer"
+          >
             Resumen
           </TabsTrigger>
-          <TabsTrigger value="products" className="flex items-center space-x-2">
+          <TabsTrigger
+            value="products"
+            className="flex items-center space-x-2 cursor-pointer"
+          >
             Productos
           </TabsTrigger>
-          <TabsTrigger value="sales" className="flex items-center space-x-2">
+          <TabsTrigger
+            value="sales"
+            className="flex items-center space-x-2 cursor-pointer"
+          >
             Ventas
           </TabsTrigger>
-          <TabsTrigger value="scanner" className="flex items-center space-x-2">
+          <TabsTrigger
+            value="scanner"
+            className="flex items-center space-x-2 cursor-pointer"
+          >
             Scanner
           </TabsTrigger>
           <TabsTrigger
             value="add-product"
-            className="flex items-center space-x-2"
+            className="flex items-center space-x-2 cursor-pointer"
           >
             Agregar
           </TabsTrigger>

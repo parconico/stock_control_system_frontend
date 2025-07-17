@@ -1,9 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { create } from "zustand";
-import { Analytics } from "../types";
-
-import { analyticsApi } from "../api";
 import { immer } from "zustand/middleware/immer";
+import { analyticsApi } from "@/lib/api";
+import type { Analytics } from "@/lib/types";
 
 interface AnalyticsState {
   analytics: Analytics | null;
@@ -11,43 +10,58 @@ interface AnalyticsState {
   salesReport: any | null;
   loading: boolean;
   error: string | null;
-  selectedPeriod: "day" | "month";
+  selectedPeriod: "day" | "month" | "custom";
+  selectedDate: Date | null;
 }
 
 interface AnalyticsActions {
-  fetchAnalytics: (period?: "day" | "month") => Promise<void>;
+  fetchAnalytics: (
+    period?: "day" | "month" | "custom",
+    date?: Date
+  ) => Promise<void>;
   fetchTopProducts: (
     period?: "day" | "week" | "month",
     limit?: number
   ) => Promise<void>;
   fetchSalesReport: (startDate: string, endDate: string) => Promise<void>;
-  setSelectedPeriod: (period: "day" | "month") => void;
+  setSelectedPeriod: (period: "day" | "month" | "custom") => void;
+  setSelectedDate: (date: Date | null) => void;
   setLoading: (loading: boolean) => void;
+  setError: (error: string | null) => void;
   clearError: () => void;
 }
 
 export const useAnalyticsStore = create<AnalyticsState & AnalyticsActions>()(
   immer((set, get) => ({
-    //Estado inicial
+    // Estado inicial
     analytics: null,
     topProducts: [],
     salesReport: null,
     loading: false,
     error: null,
     selectedPeriod: "day",
+    selectedDate: null,
 
-    //Acciones
-    fetchAnalytics: async (period?: "day" | "month") => {
+    // Acciones
+    fetchAnalytics: async (
+      period?: "day" | "month" | "custom",
+      date?: Date
+    ) => {
       const selectedPeriod = period || get().selectedPeriod;
+      const selectedDate = date !== undefined ? date : get().selectedDate;
 
       set((state) => {
         state.loading = true;
         state.error = null;
         if (period) state.selectedPeriod = period;
+        if (date !== undefined) state.selectedDate = date;
       });
 
       try {
-        const analytics = await analyticsApi.getAnalytics(selectedPeriod);
+        const analytics = await analyticsApi.getAnalytics(
+          selectedPeriod,
+          selectedDate
+        );
         set((state) => {
           state.analytics = analytics;
           state.loading = false;
@@ -99,11 +113,18 @@ export const useAnalyticsStore = create<AnalyticsState & AnalyticsActions>()(
       }
     },
 
-    setSelectedPeriod: (period: "day" | "month") => {
+    setSelectedPeriod: (period: "day" | "month" | "custom") => {
       set((state) => {
         state.selectedPeriod = period;
       });
     },
+
+    setSelectedDate: (date: Date | null) => {
+      set((state) => {
+        state.selectedDate = date;
+      });
+    },
+
     setLoading: (loading: boolean) => {
       set((state) => {
         state.loading = loading;

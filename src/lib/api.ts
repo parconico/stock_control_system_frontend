@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import axios from "axios";
 import Cookies from "js-cookie";
 import {
@@ -171,12 +172,25 @@ export const usersApi = {
   },
 };
 
-//API de Analytics
+// API de Analytics
 export const analyticsApi = {
   getAnalytics: async (
-    period: "day" | "month" = "month"
+    period: "day" | "month" | "custom" = "month",
+    date?: Date | null
   ): Promise<Analytics> => {
-    const response = await api.get("/analytics", { params: { period } });
+    const params: any = { period };
+
+    if (period === "custom" && date) {
+      // Formatear la fecha correctamente para evitar problemas de zona horaria
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      params.date = `${year}-${month}-${day}`;
+
+      console.log("📅 Enviando fecha al API:", params.date, "desde:", date);
+    }
+
+    const response = await api.get("/analytics", { params });
     return response.data;
   },
 
@@ -184,7 +198,7 @@ export const analyticsApi = {
     period: "day" | "week" | "month" = "month",
     limit = 10
   ) => {
-    const response = await api.get("analytics/top-products", {
+    const response = await api.get("/analytics/top-products", {
       params: { period, limit },
     });
     return response.data;
