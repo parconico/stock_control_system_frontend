@@ -1,11 +1,11 @@
 "use client";
 
-import { useProducts, useSales } from "@/hooks/useStores";
-import { useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useProducts } from "@/hooks/useStores";
 import { ShoppingCart } from "lucide-react";
-import ProductSearch from "./ProductSearch";
+import { useEffect } from "react";
 import CartSummary from "./CartSummary";
+import ProductSearch from "./ProductSearch";
 
 interface SalesFormProps {
   onSaleComplete: () => void;
@@ -13,22 +13,11 @@ interface SalesFormProps {
 
 export default function SalesForm({ onSaleComplete }: SalesFormProps) {
   const { fetchProducts } = useProducts();
-  const { cart, processCart, loading } = useSales();
 
   useEffect(() => {
     //Cargar productos disponibles
     fetchProducts({ page: 1, limit: 100 });
   }, [fetchProducts]);
-
-  const handleProcessSale = async () => {
-    try {
-      await processCart();
-      onSaleComplete();
-    } catch (error) {
-      //Error manejado en el store y mostrado via toast
-      console.log("Error al procesar venta:", error);
-    }
-  };
 
   return (
     <div className="space-y-6">

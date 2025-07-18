@@ -4,7 +4,7 @@ import { useProducts, useSales, useUI } from "@/hooks/useStores";
 import { useSalesStore } from "@/lib/stores/sales-store";
 import { useProductsStore } from "@/lib/stores/products-store";
 import { Scan, Search, Plus } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Card, CardContent } from "./ui/card";
@@ -41,6 +41,22 @@ export default function ProductSearch() {
     }
   }, [cartError, addToast, clearError]);
 
+  const handleSelectVariant = useCallback(
+    (product: Product, variant: ProductVariant) => {
+      if (variant.stock > 0) {
+        setSelectedProductAndVariant({ product, selectedVariant: variant });
+      } else {
+        addToast({
+          type: "error",
+          title: "Sin stock",
+          description: `La talla ${variant.size} de ${product.name} no tiene stock disponible.`,
+        });
+        setSelectedProductAndVariant(null);
+      }
+    },
+    [addToast]
+  );
+
   // ✅ Nuevo useEffect para manejar selectedProduct (búsqueda por código de barras)
   useEffect(() => {
     if (selectedProduct && selectedProduct.variants) {
@@ -55,23 +71,9 @@ export default function ProductSearch() {
         handleSelectVariant(selectedProduct, availableVariants[0]);
       }
     }
-  }, [selectedProduct]);
+  }, [selectedProduct, handleSelectVariant]);
 
-  useEffect(() => {
-    if (searchTerm.length >= 2) {
-      const timer = setTimeout(() => {
-        handleSearch();
-      }, 500);
-      return () => clearTimeout(timer);
-    } else {
-      setShowResults(false);
-      setSelectedProductAndVariant(null);
-      useProductsStore.getState().clearFilters();
-      useProductsStore.getState().fetchProducts();
-    }
-  }, [searchTerm]);
-
-  const handleSearch = async () => {
+  const handleSearch = useCallback(async () => {
     if (!searchTerm.trim()) return;
 
     setIsSearching(true);
@@ -96,20 +98,21 @@ export default function ProductSearch() {
     } finally {
       setIsSearching(false);
     }
-  };
+  }, [searchTerm, fetchProductByBarcode, fetchProducts, addToast]);
 
-  const handleSelectVariant = (product: Product, variant: ProductVariant) => {
-    if (variant.stock > 0) {
-      setSelectedProductAndVariant({ product, selectedVariant: variant });
+  useEffect(() => {
+    if (searchTerm.length >= 2) {
+      const timer = setTimeout(() => {
+        handleSearch();
+      }, 500);
+      return () => clearTimeout(timer);
     } else {
-      addToast({
-        type: "error",
-        title: "Sin stock",
-        description: `La talla ${variant.size} de ${product.name} no tiene stock disponible.`,
-      });
+      setShowResults(false);
       setSelectedProductAndVariant(null);
+      useProductsStore.getState().clearFilters();
+      useProductsStore.getState().fetchProducts();
     }
-  };
+  }, [searchTerm, handleSearch]);
 
   const handleAddToCart = () => {
     if (!selectedProductAndVariant) return;

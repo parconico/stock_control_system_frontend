@@ -29,11 +29,11 @@ import {
 import { getStockStatus } from "@/lib/utils";
 import { Badge } from "./ui/badge";
 
-interface ProductListProps {
-  onRefresh: () => void;
-}
+// interface ProductListProps {
+//   onRefresh: () => void;
+// }
 
-export default function ProductList({ onRefresh }: ProductListProps) {
+export default function ProductList() {
   const products = useProductsList();
   const loading = useProductsLoading();
   const error = useProductsError();

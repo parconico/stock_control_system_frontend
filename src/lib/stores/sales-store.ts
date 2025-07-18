@@ -73,10 +73,13 @@ export const useSalesStore = create<SalesState & SalesActions>()(
           state.meta = response.meta || null;
           state.loading = false;
         });
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const err = error as {
+          response?: { data?: { message?: string } };
+          message?: string;
+        };
         set((state) => {
-          state.error =
-            error.response?.data?.message || "Error al cargar ventas";
+          state.error = err.response?.data?.message || "Error al cargar ventas";
           state.loading = false;
         });
       }
@@ -118,11 +121,15 @@ export const useSalesStore = create<SalesState & SalesActions>()(
           console.error("❌ Error importando products store:", importError);
         }
         return newSale;
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("❌ Error creando venta:", error);
+        const err = error as {
+          response?: { data?: { message?: string } };
+          message?: string;
+        };
         const errorMessage =
-          error.response?.data?.message ||
-          error.message ||
+          err.response?.data?.message ||
+          err.message ||
           "Error al registrar venta";
         set((state) => {
           state.error = errorMessage;
@@ -345,11 +352,15 @@ export const useSalesStore = create<SalesState & SalesActions>()(
         // Refrescar ventas
         await get().fetchSales();
         console.log("🔄 Lista de ventas actualizada");
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("❌ Error procesando carrito:", error);
+        const err = error as {
+          response?: { data?: { message?: string } };
+          message?: string;
+        };
         const errorMessage =
-          error.response?.data?.message ||
-          error.message ||
+          err.response?.data?.message ||
+          err.message ||
           "Error al procesar venta";
         set((state) => {
           state.error = errorMessage;

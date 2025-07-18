@@ -1,7 +1,7 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,24 +11,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  LogOut,
-  User,
-  Settings,
-  Users,
-  Home,
-  Building2,
-  Info,
-} from "lucide-react";
-import useAuth from "@/hooks/useAuth";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Badge } from "./ui/badge";
-import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import useAuth from "@/hooks/useAuth";
+import { Building2, Home, LogOut, Settings, User, Users } from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { Badge } from "./ui/badge";
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -45,12 +37,12 @@ export default function Navbar() {
     },
   ];
 
-  // Páginas en desarrollo (comentadas por ahora)
-  const upcomingFeatures = [
-    { name: "Productos", icon: "Package", status: "En desarrollo" },
-    { name: "Ventas", icon: "ShoppingCart", status: "En desarrollo" },
-    { name: "Reportes", icon: "BarChart3", status: "Próximamente" },
-  ];
+  // // Páginas en desarrollo (comentadas por ahora)
+  // const upcomingFeatures = [
+  //   { name: "Productos", icon: "Package", status: "En desarrollo" },
+  //   { name: "Ventas", icon: "ShoppingCart", status: "En desarrollo" },
+  //   { name: "Reportes", icon: "BarChart3", status: "Próximamente" },
+  // ];
 
   return (
     <TooltipProvider>

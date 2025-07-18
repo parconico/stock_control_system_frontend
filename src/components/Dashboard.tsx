@@ -456,7 +456,7 @@ export default function Dashboard() {
           </TabsContent>
 
           <TabsContent value="products">
-            <ProductList onRefresh={handleRefresh} />
+            <ProductList />
           </TabsContent>
           <TabsContent value="sales">
             <SalesForm onSaleComplete={handleSaleAdded} />

@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable react-hooks/exhaustive-deps */
 "use client";
 
 import type React from "react";
@@ -75,11 +75,12 @@ export default function UsersPage() {
       setLoading(true);
       const data = await usersApi.getAll();
       setUsers(data);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
       addToast({
         type: "error",
         title: "Error al cargar usuarios",
-        description: error.response?.data?.message || "Error desconocido",
+        description: err.response?.data?.message || "Error desconocido",
       });
     } finally {
       setLoading(false);
@@ -102,11 +103,12 @@ export default function UsersPage() {
 
       setShowCreateDialog(false);
       resetForm();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
       addToast({
         type: "error",
         title: "Error al crear usuario",
-        description: error.response?.data?.message || "Error desconocido",
+        description: err.response?.data?.message || "Error desconocido",
       });
     } finally {
       setFormLoading(false);
@@ -138,11 +140,12 @@ export default function UsersPage() {
 
       setShowEditDialog(false);
       resetForm();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
       addToast({
         type: "error",
         title: "Error al actualizar usuario",
-        description: error.response?.data?.message || "Error desconocido",
+        description: err.response?.data?.message || "Error desconocido",
       });
     } finally {
       setFormLoading(false);
@@ -161,11 +164,12 @@ export default function UsersPage() {
         title: "Usuario eliminado",
         description: "El usuario se eliminó exitosamente",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
       addToast({
         type: "error",
         title: "Error al eliminar usuario",
-        description: error.response?.data?.message || "Error desconocido",
+        description: err.response?.data?.message || "Error desconocido",
       });
     }
   };

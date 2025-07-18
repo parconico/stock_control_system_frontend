@@ -75,7 +75,7 @@ export default function AddProductForm({
     };
 
     fetchBrands();
-  }, []);
+  }, [addToast]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));

@@ -56,12 +56,13 @@ export default function CartSummary({ onSaleComplete }: CartSummaryProps) {
       if (onSaleComplete) {
         onSaleComplete();
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("❌ Error en handleProcessCart:", error);
+      const err = error as { message?: string };
       addToast({
         type: "error",
         title: "Error al procesar venta",
-        description: error.message || "Error desconocido",
+        description: err.message || "Error desconocido",
       });
     }
   };
