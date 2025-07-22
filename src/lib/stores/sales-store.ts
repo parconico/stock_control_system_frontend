@@ -38,7 +38,14 @@ interface SalesActions {
     selectedSize?: string
   ) => void; // Modificado para aceptar selectedSize
   clearCart: () => void;
-  processCart: () => Promise<void>;
+  processCart: (
+    paymentMethod:
+      | "EFECTIVO"
+      | "TRANSFERENCIA"
+      | "TARJETA_DEBITO"
+      | "TARJETA_CREDITO"
+      | "CODIGO_QR"
+  ) => Promise<void>;
   setFilters: (filters: Partial<SaleFilters>) => void;
   clearFilters: () => void;
   setLoading: (loading: boolean) => void;
@@ -303,7 +310,14 @@ export const useSalesStore = create<SalesState & SalesActions>()(
         console.log("🧹 Carrito limpiado");
       });
     },
-    processCart: async () => {
+    processCart: async (
+      paymentMethod:
+        | "EFECTIVO"
+        | "TRANSFERENCIA"
+        | "TARJETA_DEBITO"
+        | "TARJETA_CREDITO"
+        | "CODIGO_QR" = "EFECTIVO"
+    ) => {
       const { cart } = get();
       if (cart.length === 0) {
         const error = "El carrito está vacío";
@@ -331,6 +345,7 @@ export const useSalesStore = create<SalesState & SalesActions>()(
             quantity: item.quantity,
             price: item.product.price,
             selectedSize: item.selectedSize, // Log the selected size
+            paymentMethod: paymentMethod,
           });
 
           const saleData: CreateSaleForm = {
@@ -339,6 +354,7 @@ export const useSalesStore = create<SalesState & SalesActions>()(
             quantity: item.quantity,
             unitPrice: item.product.price,
             totalPrice: item.product.price * item.quantity,
+            paymentMethod: paymentMethod,
           };
           console.log("📋 Datos de venta a enviar:", saleData);
           await get().createSale(saleData);

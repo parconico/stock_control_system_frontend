@@ -55,6 +55,12 @@ export interface Sale {
   quantity: number;
   unitPrice: number;
   totalPrice: number;
+  paymentMethod:
+    | "EFECTIVO"
+    | "TRANSFERENCIA"
+    | "TARJETA_DEBITO"
+    | "TARJETA_CREDITO"
+    | "CODIGO_QR";
   saleDate: string;
   notes?: string;
   createdAt: string;
@@ -156,6 +162,12 @@ export interface CreateSaleForm {
   quantity: number;
   unitPrice: number;
   totalPrice: number;
+  paymentMethod:
+    | "EFECTIVO"
+    | "TRANSFERENCIA"
+    | "TARJETA_DEBITO"
+    | "TARJETA_CREDITO"
+    | "CODIGO_QR";
   saleDate?: string;
 }
 
@@ -210,6 +222,14 @@ export const SIZE_OPTIONS = [
   { value: "L", label: "L" },
   { value: "XL", label: "XL" },
   { value: "XXL", label: "XXL" },
+] as const;
+
+export const PAYMENT_METHOD_OPTIONS = [
+  { value: "EFECTIVO", label: "Efectivo" },
+  { value: "TRANSFERENCIA", label: "Transferencia" },
+  { value: "TARJETA_DEBITO", label: "Tarjeta de Débito" },
+  { value: "TARJETA_CREDITO", label: "Tarjeta de Crédito" },
+  { value: "CODIGO_QR", label: "Código QR" },
 ] as const;
 
 export interface StockMovement {

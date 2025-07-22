@@ -19,7 +19,7 @@ import {
 
 //Configuracion base con axios
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_BACKEND_URL,
+  baseURL: process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001/api",
   timeout: 10000,
 });
 

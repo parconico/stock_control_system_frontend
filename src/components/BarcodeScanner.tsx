@@ -11,6 +11,14 @@ import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { Label } from "./ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
+import { PAYMENT_METHOD_OPTIONS } from "@/lib/types";
 
 interface BarcodeScannerProps {
   onSaleComplete: () => void;
@@ -23,6 +31,7 @@ export default function BarcodeScanner({
   const [barcode, setBarcode] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [selectedSize, setSelectedSize] = useState<string>("");
+  const [paymentMethod, setPaymentMethod] = useState<string>("EFECTIVO");
 
   // Zustand para estado global
   const {
@@ -111,6 +120,12 @@ export default function BarcodeScanner({
         quantity,
         unitPrice: selectedProduct.price,
         totalPrice: selectedProduct.price * quantity,
+        paymentMethod: paymentMethod as
+          | "EFECTIVO"
+          | "TRANSFERENCIA"
+          | "TARJETA_DEBITO"
+          | "TARJETA_CREDITO"
+          | "CODIGO_QR",
       });
 
       addToast({
@@ -317,6 +332,27 @@ export default function BarcodeScanner({
                     }
                     className="w-20"
                   />
+                </div>
+
+                <div className="mb-3">
+                  <label className="block text-sm font-medium mb-1">
+                    Método de pago
+                  </label>
+                  <Select
+                    value={paymentMethod}
+                    onValueChange={setPaymentMethod}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Seleccionar método de pago" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PAYMENT_METHOD_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="flex-1">

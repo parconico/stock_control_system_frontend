@@ -32,6 +32,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "./ui/tooltip";
+import SalesDetail from "./SalesDetail";
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState("overview");
@@ -327,7 +328,7 @@ export default function Dashboard() {
           onValueChange={setActiveTab}
           className="space-y-4"
         >
-          <TabsList className="grid w-full grid-cols-5 space-x-2">
+          <TabsList className="grid w-full grid-cols-6 space-x-2">
             <TabsTrigger
               value="overview"
               className="flex items-center space-x-2 cursor-pointer"
@@ -345,6 +346,12 @@ export default function Dashboard() {
               className="flex items-center space-x-2 cursor-pointer"
             >
               Ventas
+            </TabsTrigger>
+            <TabsTrigger
+              value="sales-history"
+              className="flex items-center space-x-2 cursor-pointer"
+            >
+              Historial de ventas
             </TabsTrigger>
             <TabsTrigger
               value="scanner"
@@ -460,6 +467,10 @@ export default function Dashboard() {
           </TabsContent>
           <TabsContent value="sales">
             <SalesForm onSaleComplete={handleSaleAdded} />
+          </TabsContent>
+
+          <TabsContent value="sales-history">
+            <SalesDetail />
           </TabsContent>
           <TabsContent value="scanner">
             <BarcodeScanner onSaleComplete={handleRefresh} />

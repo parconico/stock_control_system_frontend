@@ -7,6 +7,15 @@ import { Badge } from "./ui/badge";
 import { formatCurrency } from "@/lib/utils";
 import { Button } from "./ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { PAYMENT_METHOD_OPTIONS } from "@/lib/types";
+import { useState } from "react";
 
 interface CartSummaryProps {
   onSaleComplete?: () => void;
@@ -31,13 +40,21 @@ export default function CartSummary({ onSaleComplete }: CartSummaryProps) {
 
   const total = getCartTotal();
   const itemCount = getCartItemCount();
+  const [paymentMethod, setPaymentMethod] = useState<string>("EFECTIVO");
 
   const handleProcessCart = async () => {
     console.log("🚀 Iniciando procesamiento desde CartSummary");
 
     try {
       clearError();
-      await processCart();
+      await processCart(
+        paymentMethod as
+          | "EFECTIVO"
+          | "TRANSFERENCIA"
+          | "TARJETA_DEBITO"
+          | "TARJETA_CREDITO"
+          | "CODIGO_QR"
+      );
 
       addToast({
         type: "success",
@@ -264,6 +281,23 @@ export default function CartSummary({ onSaleComplete }: CartSummaryProps) {
         </div>
 
         <div className="border-t pt-4 space-y-3">
+          <div className="mb-3">
+            <label className="block text-sm font-medium mb-1">
+              Método de pago
+            </label>
+            <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Seleccionar método de pago" />
+              </SelectTrigger>
+              <SelectContent>
+                {PAYMENT_METHOD_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <div className="flex justify-between items-center">
             <span className="text-lg font-semibold">Total:</span>
             <span className="text-xl font-bold text-green-600">
