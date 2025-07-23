@@ -17,7 +17,15 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import useAuth from "@/hooks/useAuth";
-import { Building2, Home, LogOut, Settings, User, Users } from "lucide-react";
+import {
+  Building2,
+  Home,
+  LogOut,
+  Settings,
+  Upload,
+  User,
+  Users,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Badge } from "./ui/badge";
@@ -34,6 +42,12 @@ export default function Navbar() {
       href: "/",
       icon: Home,
       description: "Panel principal con métricas y análisis de ventas",
+    },
+    {
+      name: "Importar",
+      href: "/import",
+      icon: Upload,
+      description: "Importar productos desde archivo CSV/Excel",
     },
   ];
 

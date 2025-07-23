@@ -96,21 +96,23 @@ export interface ProductVariantInput {
   stock: number;
 }
 
+export type Category =
+  | "BUZO"
+  | "CAMPERA"
+  | "PANTALON"
+  | "REMERA"
+  | "MEDIAS"
+  | "GORRA"
+  | "BOTELLA"
+  | "RINONERA"
+  | "OTROS";
+
 export interface CreateProductForm {
   name: string;
   brandId: string;
   barcode: string;
-  gender: "HOMBRE" | "MUJER";
-  category:
-    | "BUZO"
-    | "CAMPERA"
-    | "PANTALON"
-    | "REMERA"
-    | "MEDIAS"
-    | "GORRA"
-    | "BOTELLA"
-    | "RINONERA"
-    | "OTROS";
+  gender: "HOMBRE" | "MUJER" | "UNISEX";
+  category: Category;
   color?: string;
   price: number;
   cost: number;
@@ -201,6 +203,7 @@ export interface ApiResponse<T> {
 export const GENDER_OPTIONS = [
   { value: "HOMBRE", label: "Hombre" },
   { value: "MUJER", label: "Mujer" },
+  { value: "UNISEX", label: "Unisex" },
 ] as const;
 
 export const CATEGORY_OPTIONS = [

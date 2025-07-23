@@ -156,7 +156,7 @@ export default function ProductList() {
               <SelectItem value="MEDIAS">Medias</SelectItem>
               <SelectItem value="GORRA">Gorra</SelectItem>
               <SelectItem value="BOTELLA">Botella</SelectItem>
-              <SelectItem value="RIÑONERA">Riñonera</SelectItem>
+              <SelectItem value="RINONERA">Riñonera</SelectItem>
               <SelectItem value="OTROS">Otros</SelectItem>
             </SelectContent>
           </Select>
