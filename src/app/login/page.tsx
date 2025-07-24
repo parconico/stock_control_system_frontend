@@ -13,7 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import useAuth from "@/hooks/useAuth";
-import { AlertCircle, Eye, EyeOff, Info, LogIn } from "lucide-react";
+import { AlertCircle, Eye, EyeOff, LogIn } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -111,7 +111,7 @@ export default function LoginPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Informacion de credenciales de prueba */}
-          <Alert>
+          {/* <Alert>
             <Info className="h-4 w-4" />
             <AlertDescription>
               <div className="space-y-2">
@@ -142,7 +142,7 @@ export default function LoginPage() {
                 </div>
               </div>
             </AlertDescription>
-          </Alert>
+          </Alert> */}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">

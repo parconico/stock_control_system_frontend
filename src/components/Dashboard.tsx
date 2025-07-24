@@ -32,11 +32,19 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "./ui/tooltip";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import SalesDetail from "./SalesDetail";
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState("overview");
   const [datePickerOpen, setDatePickerOpen] = useState(false);
+
   // Zustand
   const {
     analytics,
@@ -71,6 +79,7 @@ export default function Dashboard() {
       fetchAnalytics("custom", date);
     }
   };
+
   const handleRefresh = () => {
     fetchAnalytics(selectedPeriod, selectedDate ?? undefined);
     setActiveTab("sales-history");
@@ -92,9 +101,24 @@ export default function Dashboard() {
     today.setHours(0, 0, 0, 0);
     const compareDate = new Date(date);
     compareDate.setHours(0, 0, 0, 0);
-
     // Deshabilitar hoy y fechas futuras, y fechas muy antiguas
     return compareDate >= today || date < new Date("1900-01-01");
+  };
+
+  // Opciones de tabs para el dropdown
+  const tabOptions = [
+    { value: "overview", label: "Resumen" },
+    { value: "products", label: "Productos" },
+    { value: "sales", label: "Ventas" },
+    { value: "sales-history", label: "Historial de ventas" },
+    { value: "scanner", label: "Scanner" },
+    { value: "add-product", label: "Agregar" },
+  ];
+
+  const getCurrentTabLabel = () => {
+    return (
+      tabOptions.find((tab) => tab.value === activeTab)?.label || "Resumen"
+    );
   };
 
   if (loading) {
@@ -137,7 +161,6 @@ export default function Dashboard() {
               Este Mes
             </button>
           </div>
-
           {/* Date Picker */}
           <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
             <PopoverTrigger asChild>
@@ -215,7 +238,6 @@ export default function Dashboard() {
               </p>
             </CardContent>
           </Card>
-
           <Card className="hover:shadow-md transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <div className="flex items-center space-x-2">
@@ -258,7 +280,6 @@ export default function Dashboard() {
               </p>
             </CardContent>
           </Card>
-
           <Card className=" hover:shadow-md transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <div className="flex items-center space-x-2">
@@ -289,7 +310,6 @@ export default function Dashboard() {
               </p>
             </CardContent>
           </Card>
-
           <Card className="hover:shadow-md transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <div className="flex items-center space-x-2">
@@ -322,14 +342,15 @@ export default function Dashboard() {
           </Card>
         </div>
 
-        {/*Tabs prinicipales */}
+        {/* Tabs principales */}
         <Tabs
           defaultValue="overview"
           value={activeTab}
           onValueChange={setActiveTab}
           className="space-y-4"
         >
-          <TabsList className="grid w-full grid-cols-6 space-x-2">
+          {/* Desktop Tabs */}
+          <TabsList className="hidden md:grid w-full grid-cols-6 space-x-2">
             <TabsTrigger
               value="overview"
               className="flex items-center space-x-2 cursor-pointer"
@@ -368,10 +389,33 @@ export default function Dashboard() {
             </TabsTrigger>
           </TabsList>
 
+          {/* Mobile Dropdown */}
+          <div className="md:hidden">
+            <Select value={activeTab} onValueChange={setActiveTab}>
+              <SelectTrigger className="w-full cursor-pointer">
+                <SelectValue>
+                  <div className="flex items-center space-x-2">
+                    <span>{getCurrentTabLabel()}</span>
+                  </div>
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {tabOptions.map((tab) => (
+                  <SelectItem
+                    key={tab.value}
+                    value={tab.value}
+                    className="cursor-pointer"
+                  >
+                    {tab.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <TabsContent value="overview" className="space-y-4">
             {/* Comparacion de rendimiento */}
             <SalesComparison analytics={analytics} />
-
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Top productos */}
               <Card>
@@ -419,7 +463,6 @@ export default function Dashboard() {
                   </div>
                 </CardContent>
               </Card>
-
               {/* Stock bajo */}
               <Card>
                 <CardHeader>
@@ -462,14 +505,12 @@ export default function Dashboard() {
               </Card>
             </div>
           </TabsContent>
-
           <TabsContent value="products">
             <ProductList />
           </TabsContent>
           <TabsContent value="sales">
             <SalesForm onSaleComplete={handleSaleAdded} />
           </TabsContent>
-
           <TabsContent value="sales-history">
             <SalesDetail />
           </TabsContent>
