@@ -30,7 +30,6 @@ import {
   Loader2,
   Eye,
 } from "lucide-react";
-
 import { useProducts, useUI } from "@/hooks/useStores";
 import { brandsApi } from "@/lib/api";
 import type { CreateProductForm, Brand } from "@/lib/types";
@@ -64,6 +63,7 @@ export default function ProductImporter() {
   const [file, setFile] = useState<File | null>(null);
   const [parsedData, setParsedData] = useState<ParsedData | null>(null);
   const [importing, setImporting] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false); // ✅ Nuevo estado para análisis
   const [progress, setProgress] = useState(0);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [activeTab, setActiveTab] = useState("upload");
@@ -348,19 +348,31 @@ export default function ProductImporter() {
       }
 
       setFile(selectedFile);
+      setAnalyzing(true); // ✅ Iniciar estado de análisis
+      setParsedData(null); // ✅ Limpiar datos previos
 
       try {
+        // ✅ Simular pasos del análisis con pequeñas pausas
+        await new Promise((resolve) => setTimeout(resolve, 300));
+
         // Cargar marcas
         await loadBrands();
+
+        await new Promise((resolve) => setTimeout(resolve, 200));
 
         // Detectar nombre de marca del archivo
         const brandName = extractBrandFromFilename(selectedFile.name);
         setDetectedBrandName(brandName);
 
+        await new Promise((resolve) => setTimeout(resolve, 300));
+
+        // Leer y parsear archivo
         const text = await selectedFile.text();
         const separator = detectSeparator(text);
         const rows = parseCSV(text, separator);
         const headers = Object.keys(rows[0] || {});
+
+        await new Promise((resolve) => setTimeout(resolve, 400));
 
         setParsedData({
           headers,
@@ -370,15 +382,19 @@ export default function ProductImporter() {
 
         addToast({
           type: "success",
-          title: "Archivo cargado",
+          title: "Archivo analizado correctamente",
           description: `Se detectaron ${rows.length} filas. Marca detectada: "${brandName}"`,
         });
       } catch (error) {
         addToast({
-          title: "Error al leer archivo",
+          title: "Error al analizar archivo",
           description: "No se pudo procesar el archivo seleccionado",
           type: "error",
         });
+        setFile(null);
+        setDetectedBrandName("");
+      } finally {
+        setAnalyzing(false); // ✅ Finalizar estado de análisis
       }
     },
     [addToast]
@@ -562,7 +578,7 @@ PANTALON JEAN AZUL L,,25000,1`;
           </Alert>
 
           {/* Marca detectada */}
-          {detectedBrandName && (
+          {detectedBrandName && !analyzing && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
@@ -591,7 +607,11 @@ PANTALON JEAN AZUL L,,25000,1`;
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button onClick={downloadTemplate} variant="outline">
+              <Button
+                onClick={downloadTemplate}
+                variant="outline"
+                className="cursor-pointer"
+              >
                 <Download className="h-4 w-4 mr-2" />
                 Descargar Plantilla CSV
               </Button>
@@ -623,7 +643,8 @@ PANTALON JEAN AZUL L,,25000,1`;
                   type="file"
                   accept=".csv,.xlsx,.xls"
                   onChange={handleFileSelect}
-                  className="mt-1"
+                  className="mt-1 cursor-pointer"
+                  disabled={analyzing} // ✅ Deshabilitar durante análisis
                 />
               </div>
 
@@ -633,16 +654,54 @@ PANTALON JEAN AZUL L,,25000,1`;
                   <AlertDescription>
                     <strong>Archivo seleccionado:</strong> {file.name} (
                     {(file.size / 1024).toFixed(1)} KB)
-                    <br />
-                    <strong>Marca que se creará:</strong> {detectedBrandName}
+                    {!analyzing && detectedBrandName && (
+                      <>
+                        <br />
+                        <strong>Marca que se creará:</strong>{" "}
+                        {detectedBrandName}
+                      </>
+                    )}
                   </AlertDescription>
                 </Alert>
               )}
             </CardContent>
           </Card>
 
+          {/* ✅ Spinner de análisis */}
+          {analyzing && (
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex flex-col items-center justify-center py-8 space-y-4">
+                  <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
+                  <div className="text-center space-y-2">
+                    <h3 className="text-lg font-medium">
+                      Analizando archivo...
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      Detectando estructura, marca y productos del archivo CSV
+                    </p>
+                    <div className="flex items-center justify-center space-x-2 text-xs text-muted-foreground">
+                      <div className="flex space-x-1">
+                        <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce"></div>
+                        <div
+                          className="w-2 h-2 bg-blue-600 rounded-full animate-bounce"
+                          style={{ animationDelay: "0.1s" }}
+                        ></div>
+                        <div
+                          className="w-2 h-2 bg-blue-600 rounded-full animate-bounce"
+                          style={{ animationDelay: "0.2s" }}
+                        ></div>
+                      </div>
+                      <span>Procesando datos</span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Vista previa */}
-          {parsedData && (
+          {parsedData && !analyzing && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
@@ -728,7 +787,7 @@ PANTALON JEAN AZUL L,,25000,1`;
                   <Button
                     onClick={handleImport}
                     disabled={importing}
-                    className="bg-green-600 hover:bg-green-700"
+                    className="bg-green-600 hover:bg-green-700 cursor-pointer"
                   >
                     {importing ? (
                       <>
@@ -746,27 +805,52 @@ PANTALON JEAN AZUL L,,25000,1`;
               </CardContent>
             </Card>
           )}
-
-          {/* Progreso */}
-          {importing && (
-            <Card>
-              <CardContent className="pt-6">
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>
-                      Procesando productos para marca: {detectedBrandName}...
-                    </span>
-                    <span>{Math.round(progress)}%</span>
-                  </div>
-                  <Progress value={progress} className="w-full" />
-                </div>
-              </CardContent>
-            </Card>
-          )}
         </TabsContent>
 
         <TabsContent value="results" className="space-y-6">
-          {result && (
+          {importing ? (
+            // ✅ Spinner mientras se importan los productos
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex flex-col items-center justify-center py-12 space-y-6">
+                  <Loader2 className="h-16 w-16 animate-spin text-green-600" />
+                  <div className="text-center space-y-3">
+                    <h3 className="text-2xl font-semibold text-green-800">
+                      Importando productos...
+                    </h3>
+                    <p className="text-lg text-green-700">
+                      Creando productos para la marca:{" "}
+                      <strong>{detectedBrandName}</strong>
+                    </p>
+                    <div className="flex items-center justify-center space-x-2 text-sm text-green-600">
+                      <div className="flex space-x-1">
+                        <div className="w-3 h-3 bg-green-600 rounded-full animate-bounce"></div>
+                        <div
+                          className="w-3 h-3 bg-green-600 rounded-full animate-bounce"
+                          style={{ animationDelay: "0.1s" }}
+                        ></div>
+                        <div
+                          className="w-3 h-3 bg-green-600 rounded-full animate-bounce"
+                          style={{ animationDelay: "0.2s" }}
+                        ></div>
+                      </div>
+                      <span className="font-medium">
+                        {Math.round(progress)}% completado
+                      </span>
+                    </div>
+                    <div className="w-full max-w-md mt-6">
+                      <Progress value={progress} className="w-full h-3" />
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-4">
+                      Por favor espera mientras procesamos todos los
+                      productos...
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ) : result ? (
+            // ✅ Resultados cuando la importación está completa
             <>
               {/* Resumen */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -900,15 +984,19 @@ PANTALON JEAN AZUL L,,25000,1`;
                     setDetectedBrandName("");
                   }}
                   variant="outline"
+                  className="cursor-pointer"
                 >
                   Importar Otro Archivo
                 </Button>
-                <Button onClick={() => (window.location.href = "/")}>
+                <Button
+                  onClick={() => (window.location.href = "/")}
+                  className="cursor-pointer"
+                >
                   Ir al Dashboard
                 </Button>
               </div>
             </>
-          )}
+          ) : null}
         </TabsContent>
       </Tabs>
     </div>

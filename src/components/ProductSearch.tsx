@@ -2,9 +2,8 @@
 
 import { useProducts, useSales, useUI } from "@/hooks/useStores";
 import { useSalesStore } from "@/lib/stores/sales-store";
-import { useProductsStore } from "@/lib/stores/products-store";
 import { Scan, Search, Plus } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Card, CardContent } from "./ui/card";
@@ -13,7 +12,6 @@ import type { Product, ProductVariant } from "@/lib/types";
 
 export default function ProductSearch() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [isSearching, setIsSearching] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [selectedProductAndVariant, setSelectedProductAndVariant] = useState<{
     product: Product;
@@ -24,11 +22,19 @@ export default function ProductSearch() {
     products,
     fetchProducts,
     fetchProductByBarcode,
-    selectedProduct, // ✅ Agregar selectedProduct para manejar búsqueda por código de barras
+    selectedProduct,
     loading: productsLoading,
   } = useProducts();
+
   const { addToCart, error: cartError, clearError } = useSales();
   const { addToast } = useUI();
+
+  // Cargar todos los productos al montar el componente
+  useEffect(() => {
+    if (products.length === 0) {
+      fetchProducts({});
+    }
+  }, [products.length, fetchProducts]);
 
   useEffect(() => {
     if (cartError) {
@@ -40,6 +46,11 @@ export default function ProductSearch() {
       clearError();
     }
   }, [cartError, addToast, clearError]);
+
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setSelectedProductAndVariant(null);
+  };
 
   const handleSelectVariant = useCallback(
     (product: Product, variant: ProductVariant) => {
@@ -57,13 +68,10 @@ export default function ProductSearch() {
     [addToast]
   );
 
-  // ✅ Nuevo useEffect para manejar selectedProduct (búsqueda por código de barras)
+  // Manejo de selectedProduct (búsqueda por código de barras)
   useEffect(() => {
     if (selectedProduct && selectedProduct.variants) {
-      // Si se encontró un producto por código de barras, mostrarlo en los resultados
       setShowResults(true);
-
-      // Si solo tiene una variante con stock, seleccionarla automáticamente
       const availableVariants = selectedProduct.variants.filter(
         (v) => v.stock > 0
       );
@@ -73,52 +81,76 @@ export default function ProductSearch() {
     }
   }, [selectedProduct, handleSelectVariant]);
 
-  const handleSearch = useCallback(async () => {
-    if (!searchTerm.trim()) return;
+  // Búsqueda local con useMemo para optimizar rendimiento
+  const filteredProducts = useMemo(() => {
+    if (!searchTerm.trim()) return [];
 
-    setIsSearching(true);
-    setSelectedProductAndVariant(null);
+    const term = searchTerm.toLowerCase().trim();
 
-    try {
-      if (/^\d+$/.test(searchTerm)) {
-        // ✅ Búsqueda por código de barras - el resultado se manejará en el useEffect de selectedProduct
-        await fetchProductByBarcode(searchTerm);
-      } else {
-        // Búsqueda por texto
-        await fetchProducts({ search: searchTerm, limit: 20 });
-      }
-      setShowResults(true);
-    } catch (error) {
-      console.error("Error en búsqueda:", error);
-      addToast({
-        type: "error",
-        title: "Error en búsqueda",
-        description: "No se pudieron cargar los productos",
-      });
-    } finally {
-      setIsSearching(false);
+    // Si es un código de barras (solo números), buscar exactamente
+    if (/^\d+$/.test(searchTerm)) {
+      return products.filter(
+        (product) =>
+          product.barcode === searchTerm &&
+          product.variants?.some((variant) => variant.stock > 0)
+      );
     }
-  }, [searchTerm, fetchProductByBarcode, fetchProducts, addToast]);
 
+    // Búsqueda por texto en múltiples campos
+    return products.filter((product) => {
+      const matchesName = product.name.toLowerCase().includes(term);
+      const matchesBrand = product.brand?.name.toLowerCase().includes(term);
+      const matchesBarcode = product.barcode.includes(term);
+      const matchesColor = product.color?.toLowerCase().includes(term);
+      const matchesCategory = product.category.toLowerCase().includes(term);
+      const hasStock = product.variants?.some((variant) => variant.stock > 0);
+
+      return (
+        (matchesName ||
+          matchesBrand ||
+          matchesBarcode ||
+          matchesColor ||
+          matchesCategory) &&
+        hasStock
+      );
+    });
+  }, [products, searchTerm]);
+
+  // Manejar búsqueda por código de barras cuando no se encuentra localmente
+  const handleBarcodeSearch = useCallback(async () => {
+    if (/^\d+$/.test(searchTerm) && filteredProducts.length === 0) {
+      try {
+        await fetchProductByBarcode(searchTerm);
+      } catch (error) {
+        console.error("Producto no encontrado:", error);
+        addToast({
+          type: "error",
+          title: "Producto no encontrado",
+          description: "No se encontró un producto con ese código de barras",
+        });
+      }
+    }
+  }, [searchTerm, filteredProducts.length, fetchProductByBarcode, addToast]);
+
+  // Efecto para mostrar/ocultar resultados y manejar búsqueda por código de barras
   useEffect(() => {
     if (searchTerm.length >= 2) {
+      setShowResults(true);
+      // Si es código de barras y no hay resultados locales, buscar en el servidor
       const timer = setTimeout(() => {
-        handleSearch();
+        handleBarcodeSearch();
       }, 500);
       return () => clearTimeout(timer);
     } else {
       setShowResults(false);
       setSelectedProductAndVariant(null);
-      useProductsStore.getState().clearFilters();
-      useProductsStore.getState().fetchProducts();
     }
-  }, [searchTerm, handleSearch]);
+  }, [searchTerm, handleBarcodeSearch]);
 
   const handleAddToCart = () => {
     if (!selectedProductAndVariant) return;
 
     const { product, selectedVariant } = selectedProductAndVariant;
-
     addToCart(product, 1, selectedVariant.size);
 
     setTimeout(() => {
@@ -132,17 +164,23 @@ export default function ProductSearch() {
         setSearchTerm("");
         setShowResults(false);
         setSelectedProductAndVariant(null);
-        useProductsStore.getState().clearFilters();
-        useProductsStore.getState().fetchProducts();
       }
     }, 100);
   };
 
-  // ✅ Combinar productos de búsqueda normal y selectedProduct (código de barras)
-  const allProducts =
-    selectedProduct && /^\d+$/.test(searchTerm) ? [selectedProduct] : products;
+  // Combinar productos filtrados localmente con selectedProduct (código de barras del servidor)
+  const displayProducts = useMemo(() => {
+    if (
+      selectedProduct &&
+      /^\d+$/.test(searchTerm) &&
+      filteredProducts.length === 0
+    ) {
+      return [selectedProduct];
+    }
+    return filteredProducts;
+  }, [selectedProduct, searchTerm, filteredProducts]);
 
-  const availableProducts = allProducts.filter((product) =>
+  const availableProducts = displayProducts.filter((product) =>
     product.variants?.some((variant) => variant.stock > 0)
   );
 
@@ -152,25 +190,25 @@ export default function ProductSearch() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar por nombre o código de barras..."
+            placeholder="Buscar por nombre, marca, código de barras..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
             className="pl-10"
           />
         </div>
         <Button
-          onClick={handleSearch}
-          disabled={isSearching || !searchTerm.trim()}
+          onClick={() => setShowResults(true)}
+          disabled={!searchTerm.trim()}
         >
           <Scan className="h-4 w-4 mr-2" />
-          {isSearching ? "Buscando..." : "Buscar"}
+          Buscar
         </Button>
       </div>
 
-      {showResults && (
+      {showResults && searchTerm.length >= 2 && (
         <Card>
           <CardContent className="p-4">
-            {productsLoading || isSearching ? (
+            {productsLoading ? (
               <div className="text-center py-4">
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
                 <p className="mt-2 text-sm text-muted-foreground">
@@ -209,10 +247,15 @@ export default function ProductSearch() {
                                 {product.color}
                               </Badge>
                             )}
+                            <Badge
+                              variant="outline"
+                              className="text-xs font-mono"
+                            >
+                              {product.barcode}
+                            </Badge>
                           </div>
                         </div>
                       </div>
-
                       <div className="space-y-2">
                         <p className="text-xs font-medium text-muted-foreground">
                           Tallas disponibles:
@@ -260,7 +303,7 @@ export default function ProductSearch() {
                     </div>
                     <Button
                       onClick={handleAddToCart}
-                      disabled={productsLoading || isSearching}
+                      disabled={productsLoading}
                     >
                       <Plus className="h-4 w-4 mr-2" />
                       Agregar al Carrito
@@ -271,16 +314,11 @@ export default function ProductSearch() {
             ) : (
               <div className="text-center py-4">
                 <p className="text-muted-foreground">
-                  {searchTerm
-                    ? "No se encontraron productos con stock disponible"
-                    : "Ingresa un término de búsqueda"}
+                  No se encontraron productos con stock disponible
                 </p>
-                {searchTerm && allProducts.length > 0 && (
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Se encontraron {allProducts.length} productos pero ninguno
-                    tiene stock disponible
-                  </p>
-                )}
+                <p className="text-xs text-muted-foreground mt-2">
+                  Intenta con otro término de búsqueda
+                </p>
               </div>
             )}
           </CardContent>
