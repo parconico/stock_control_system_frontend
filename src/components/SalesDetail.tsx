@@ -192,18 +192,22 @@ export default function SalesDetail() {
 
             {/* Método de pago */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">Método de pago</label>
+              <label className="text-sm font-medium ">Método de pago</label>
               <Select
                 value={selectedPaymentMethod}
                 onValueChange={setSelectedPaymentMethod}
               >
-                <SelectTrigger>
+                <SelectTrigger className="cursor-pointer">
                   <SelectValue placeholder="Todos los métodos" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos los métodos</SelectItem>
                   {PAYMENT_METHOD_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
+                    <SelectItem
+                      key={option.value}
+                      value={option.value}
+                      className="cursor-pointer"
+                    >
                       {option.label}
                     </SelectItem>
                   ))}
@@ -213,14 +217,14 @@ export default function SalesDetail() {
 
             {/* Fecha inicio */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">Fecha inicio</label>
+              <label className="text-sm font-medium ">Fecha inicio</label>
               <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
-                <PopoverTrigger asChild>
+                <PopoverTrigger asChild className="cursor-pointer">
                   <Button
                     variant="outline"
                     className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !startDate && "text-muted-foreground"
+                      "w-full justify-start text-left font-normal ",
+                      !startDate && "text-muted-foreground "
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
@@ -248,7 +252,7 @@ export default function SalesDetail() {
             <div className="space-y-2">
               <label className="text-sm font-medium">Fecha fin</label>
               <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
-                <PopoverTrigger asChild>
+                <PopoverTrigger asChild className="cursor-pointer">
                   <Button
                     variant="outline"
                     className={cn(

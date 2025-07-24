@@ -199,6 +199,7 @@ export default function ProductSearch() {
         <Button
           onClick={() => setShowResults(true)}
           disabled={!searchTerm.trim()}
+          className="cursor-pointer"
         >
           <Scan className="h-4 w-4 mr-2" />
           Buscar
@@ -275,7 +276,7 @@ export default function ProductSearch() {
                                 onClick={() =>
                                   handleSelectVariant(product, variant)
                                 }
-                                className="text-xs"
+                                className="text-xs cursor-pointer"
                                 disabled={variant.stock <= 0}
                               >
                                 {variant.size} ({variant.stock})
@@ -304,6 +305,7 @@ export default function ProductSearch() {
                     <Button
                       onClick={handleAddToCart}
                       disabled={productsLoading}
+                      className="cursor-pointer"
                     >
                       <Plus className="h-4 w-4 mr-2" />
                       Agregar al Carrito

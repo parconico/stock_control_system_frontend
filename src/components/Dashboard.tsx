@@ -73,6 +73,7 @@ export default function Dashboard() {
   };
   const handleRefresh = () => {
     fetchAnalytics(selectedPeriod, selectedDate ?? undefined);
+    setActiveTab("sales-history");
   };
 
   const handleProductAdded = () => {
@@ -82,7 +83,7 @@ export default function Dashboard() {
 
   const handleSaleAdded = () => {
     handleRefresh();
-    setActiveTab("overview");
+    setActiveTab("sales-history");
   };
 
   // Función para deshabilitar fechas en el calendario

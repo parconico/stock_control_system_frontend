@@ -279,7 +279,7 @@ export default function BarcodeScanner({
                           }
                           size="sm"
                           onClick={() => setSelectedSize(variant.size)}
-                          className="flex flex-col h-auto py-2"
+                          className="flex flex-col h-auto py-2 cursor-pointer"
                         >
                           <span className="font-medium">{variant.size}</span>
                           <span className="text-xs opacity-75">
@@ -342,7 +342,7 @@ export default function BarcodeScanner({
                     value={paymentMethod}
                     onValueChange={setPaymentMethod}
                   >
-                    <SelectTrigger className="w-full">
+                    <SelectTrigger className="w-full cursor-pointer">
                       <SelectValue placeholder="Seleccionar método de pago" />
                     </SelectTrigger>
                     <SelectContent>
@@ -372,7 +372,7 @@ export default function BarcodeScanner({
                       selectedProduct.variants.length > 0 &&
                       !selectedSize)
                   }
-                  className="flex items-center space-x-2"
+                  className="flex items-center space-x-2 cursor-pointer"
                 >
                   <ShoppingCart className="h-4 w-4" />
                   <span>

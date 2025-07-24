@@ -238,7 +238,7 @@ export default function CartSummary({ onSaleComplete }: CartSummaryProps) {
                       )
                     }
                     disabled={loading || item.quantity <= 1}
-                    className="h-8 w-8 p-0"
+                    className="h-8 w-8 p-0 cursor-pointer"
                   >
                     <Minus className="h-3 w-3" />
                   </Button>
@@ -258,7 +258,7 @@ export default function CartSummary({ onSaleComplete }: CartSummaryProps) {
                       )
                     }
                     disabled={loading || item.quantity >= maxStock}
-                    className="h-8 w-8 p-0"
+                    className="h-8 w-8 p-0 cursor-pointer"
                   >
                     <Plus className="h-3 w-3" />
                   </Button>
@@ -270,7 +270,7 @@ export default function CartSummary({ onSaleComplete }: CartSummaryProps) {
                       handleRemoveItem(item.product.id, item.selectedSize)
                     }
                     disabled={loading}
-                    className="text-red-600 hover:text-red-700 h-8 w-8 p-0"
+                    className="text-red-600 hover:text-red-700 h-8 w-8 p-0 cursor-pointer"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -310,7 +310,7 @@ export default function CartSummary({ onSaleComplete }: CartSummaryProps) {
               variant="outline"
               onClick={clearCart}
               disabled={loading}
-              className="bg-transparent"
+              className="bg-transparent cursor-pointer"
             >
               Limpiar Carrito
             </Button>
@@ -318,7 +318,7 @@ export default function CartSummary({ onSaleComplete }: CartSummaryProps) {
             <Button
               onClick={handleProcessCart}
               disabled={loading || cart.length === 0}
-              className="bg-green-600 hover:bg-green-700"
+              className="bg-green-600 hover:bg-green-700 cursor-pointer"
             >
               {loading ? (
                 <div className="flex items-center space-x-2">
