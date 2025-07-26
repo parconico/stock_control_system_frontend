@@ -49,7 +49,7 @@ export interface Product {
 }
 
 export interface Sale {
-  [x: string]: any;
+  size: string;
   id: string;
   productId: string;
   product?: Product;
