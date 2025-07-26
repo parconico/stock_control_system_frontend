@@ -53,7 +53,7 @@ export default function CartSummary({ onSaleComplete }: CartSummaryProps) {
           | "TRANSFERENCIA"
           | "TARJETA_DEBITO"
           | "TARJETA_CREDITO"
-          | "CODIGO_QR"
+          | "QR"
       );
 
       addToast({

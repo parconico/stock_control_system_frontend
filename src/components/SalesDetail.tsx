@@ -58,7 +58,7 @@ export default function SalesDetail() {
   useEffect(() => {
     fetchSales({
       page: 1,
-      limit: 100,
+      limit: 99999,
       startDate: startDate ? format(startDate, "yyyy-MM-dd") : undefined,
       endDate: endDate ? format(endDate, "yyyy-MM-dd") : undefined,
     });
@@ -73,7 +73,7 @@ export default function SalesDetail() {
       case "TARJETA_DEBITO":
       case "TARJETA_CREDITO":
         return <CreditCard className="h-4 w-4" />;
-      case "CODIGO_QR":
+      case "QR":
         return <QrCode className="h-4 w-4" />;
       default:
         return <Receipt className="h-4 w-4" />;
@@ -95,7 +95,7 @@ export default function SalesDetail() {
         return "bg-purple-100 text-purple-800";
       case "TARJETA_CREDITO":
         return "bg-orange-100 text-orange-800";
-      case "CODIGO_QR":
+      case "QR":
         return "bg-indigo-100 text-indigo-800";
       default:
         return "bg-gray-100 text-gray-800";
@@ -119,7 +119,7 @@ export default function SalesDetail() {
       }),
       Producto: sale.product?.name || "N/A",
       Marca: sale.product?.brand?.name || "N/A",
-      Talla: sale.product?.variants?.[0]?.size || "N/A",
+      Talla: sale.size || "N/A",
       Cantidad: sale.quantity,
       "Precio Unitario": sale.unitPrice,
       Total: sale.totalPrice,
@@ -483,9 +483,9 @@ export default function SalesDetail() {
                         <Badge variant="outline" className="text-xs">
                           {sale.product?.brand?.name}
                         </Badge>
-                        {sale.product?.variants?.[0]?.size && (
+                        {sale.size && (
                           <Badge variant="outline" className="text-xs">
-                            Talla: {sale.product?.variants?.[0]?.size}
+                            Talla: {sale.size || "N/A"}
                           </Badge>
                         )}
                       </div>
@@ -543,9 +543,9 @@ export default function SalesDetail() {
 
                     {/* Badges */}
                     <div className="flex flex-wrap gap-1">
-                      {sale.product?.variants?.[0]?.size && (
+                      {sale.size && (
                         <Badge variant="outline" className="text-xs">
-                          {sale.product?.variants?.[0]?.size}
+                          {sale.size}
                         </Badge>
                       )}
                       <Badge variant="outline" className="text-xs">

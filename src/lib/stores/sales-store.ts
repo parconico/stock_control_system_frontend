@@ -44,7 +44,7 @@ interface SalesActions {
       | "TRANSFERENCIA"
       | "TARJETA_DEBITO"
       | "TARJETA_CREDITO"
-      | "CODIGO_QR"
+      | "QR"
   ) => Promise<void>;
   setFilters: (filters: Partial<SaleFilters>) => void;
   clearFilters: () => void;
@@ -316,7 +316,7 @@ export const useSalesStore = create<SalesState & SalesActions>()(
         | "TRANSFERENCIA"
         | "TARJETA_DEBITO"
         | "TARJETA_CREDITO"
-        | "CODIGO_QR" = "EFECTIVO"
+        | "QR" = "EFECTIVO"
     ) => {
       const { cart } = get();
       if (cart.length === 0) {

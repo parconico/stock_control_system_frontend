@@ -49,6 +49,7 @@ export interface Product {
 }
 
 export interface Sale {
+  [x: string]: any;
   id: string;
   productId: string;
   product?: Product;
@@ -60,7 +61,7 @@ export interface Sale {
     | "TRANSFERENCIA"
     | "TARJETA_DEBITO"
     | "TARJETA_CREDITO"
-    | "CODIGO_QR";
+    | "QR";
   saleDate: string;
   notes?: string;
   createdAt: string;
@@ -169,7 +170,7 @@ export interface CreateSaleForm {
     | "TRANSFERENCIA"
     | "TARJETA_DEBITO"
     | "TARJETA_CREDITO"
-    | "CODIGO_QR";
+    | "QR";
   saleDate?: string;
 }
 
@@ -232,7 +233,7 @@ export const PAYMENT_METHOD_OPTIONS = [
   { value: "TRANSFERENCIA", label: "Transferencia" },
   { value: "TARJETA_DEBITO", label: "Tarjeta de Débito" },
   { value: "TARJETA_CREDITO", label: "Tarjeta de Crédito" },
-  { value: "CODIGO_QR", label: "Código QR" },
+  { value: "QR", label: "Código QR" },
 ] as const;
 
 export interface StockMovement {

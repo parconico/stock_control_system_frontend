@@ -125,7 +125,7 @@ export default function BarcodeScanner({
           | "TRANSFERENCIA"
           | "TARJETA_DEBITO"
           | "TARJETA_CREDITO"
-          | "CODIGO_QR",
+          | "QR",
       });
 
       addToast({

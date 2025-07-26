@@ -85,7 +85,7 @@ export default function ProductSearch() {
   const filteredProducts = useMemo(() => {
     if (!searchTerm.trim()) return [];
 
-    const term = searchTerm.toLowerCase().trim();
+    const term = searchTerm.trim();
 
     // Si es un código de barras (solo números), buscar exactamente
     if (/^\d+$/.test(searchTerm)) {

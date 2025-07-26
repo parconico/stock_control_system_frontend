@@ -16,7 +16,7 @@ export default function SalesForm({ onSaleComplete }: SalesFormProps) {
 
   useEffect(() => {
     //Cargar productos disponibles
-    fetchProducts({ page: 1, limit: 100 });
+    fetchProducts({ page: 1, limit: 999999 });
   }, [fetchProducts]);
 
   return (
