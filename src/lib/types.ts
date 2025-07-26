@@ -226,6 +226,7 @@ export const SIZE_OPTIONS = [
   { value: "L", label: "L" },
   { value: "XL", label: "XL" },
   { value: "XXL", label: "XXL" },
+  { value: "UNICO", label: "UNICO" },
 ] as const;
 
 export const PAYMENT_METHOD_OPTIONS = [
