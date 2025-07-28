@@ -1,6 +1,6 @@
 /* eslint-disable react/no-unescaped-entities */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unused-vars */
+
 "use client";
 
 import type React from "react";
@@ -63,7 +63,7 @@ export default function ProductImporter() {
   const [file, setFile] = useState<File | null>(null);
   const [parsedData, setParsedData] = useState<ParsedData | null>(null);
   const [importing, setImporting] = useState(false);
-  const [analyzing, setAnalyzing] = useState(false); // ✅ Nuevo estado para análisis
+  const [analyzing, setAnalyzing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [activeTab, setActiveTab] = useState("upload");
@@ -103,7 +103,7 @@ export default function ProductImporter() {
     return brandName;
   };
 
-  // Detectar separador CSV
+  // Detectar separador CSV mejorado
   const detectSeparator = (text: string): string => {
     const separators = [",", ";", "\t"];
     const firstLine = text.split("\n")[0];
@@ -122,14 +122,25 @@ export default function ProductImporter() {
     return bestSeparator;
   };
 
-  // Parsear CSV
+  // Parsear CSV mejorado para manejar columnas vacías
   const parseCSV = (text: string, separator: string): CSVRow[] => {
     const lines = text.split("\n").filter((line) => line.trim());
     if (lines.length === 0) return [];
 
-    const headers = lines[0]
+    // Parsear headers y limpiar columnas vacías
+    const rawHeaders = lines[0]
       .split(separator)
       .map((h) => h.trim().replace(/"/g, ""));
+    const headers = rawHeaders.map((header, index) => {
+      if (!header || header === "") {
+        return `COLUMNA_${index + 1}`; // Dar nombre a columnas vacías
+      }
+      return header;
+    });
+
+    console.log("Headers originales:", rawHeaders);
+    console.log("Headers procesados:", headers);
+
     const rows: CSVRow[] = [];
 
     for (let i = 1; i < lines.length; i++) {
@@ -142,10 +153,107 @@ export default function ProductImporter() {
         row[header] = values[index] || "";
       });
 
-      rows.push(row);
+      // Solo agregar filas que tengan al menos el artículo
+      const firstNonEmptyValue = Object.values(row).find(
+        (val) => val && val.trim()
+      );
+      if (firstNonEmptyValue) {
+        rows.push(row);
+      }
     }
 
     return rows;
+  };
+
+  // Función mejorada para parsear precios argentinos
+  const parsePrice = (priceStr: string): number => {
+    if (!priceStr || priceStr.trim() === "") return 0;
+
+    console.log("Parseando precio:", priceStr);
+
+    // Limpiar el string de precio
+    let cleanPrice = priceStr.toString().trim();
+
+    // Remover símbolos de moneda y espacios
+    cleanPrice = cleanPrice.replace(/[$€£¥₹₽]/g, "");
+    cleanPrice = cleanPrice.replace(/\s/g, "");
+
+    console.log("Precio limpio:", cleanPrice);
+
+    // Para formato argentino típico como "18.400", "33.400", etc.
+    // donde el punto es separador de miles
+    if (cleanPrice.match(/^\d{1,3}(\.\d{3})*$/)) {
+      // Formato: 18.400, 123.456, etc. (punto como separador de miles)
+      const price = Number.parseInt(cleanPrice.replace(/\./g, ""));
+      console.log("Precio parseado (formato argentino):", price);
+      return price;
+    }
+
+    // Para formato con decimales como "18.400,50"
+    if (cleanPrice.match(/^\d{1,3}(\.\d{3})*,\d{1,2}$/)) {
+      // Formato: 18.400,50 (punto separador de miles, coma decimal)
+      const parts = cleanPrice.split(",");
+      const integerPart = Number.parseInt(parts[0].replace(/\./g, ""));
+      const decimalPart =
+        Number.parseInt(parts[1]) / Math.pow(10, parts[1].length);
+      const price = integerPart + decimalPart;
+      console.log("Precio parseado (con decimales):", price);
+      return price;
+    }
+
+    // Para formato americano como "1,234.56"
+    if (cleanPrice.match(/^\d{1,3}(,\d{3})*\.\d{1,2}$/)) {
+      // Formato: 1,234.56 (coma separador de miles, punto decimal)
+      const price = Number.parseFloat(cleanPrice.replace(/,/g, ""));
+      console.log("Precio parseado (formato americano):", price);
+      return price;
+    }
+
+    // Para números simples sin separadores
+    if (cleanPrice.match(/^\d+$/)) {
+      const price = Number.parseInt(cleanPrice);
+      console.log("Precio parseado (número simple):", price);
+      return price;
+    }
+
+    // Para números con solo coma decimal
+    if (cleanPrice.match(/^\d+,\d{1,2}$/)) {
+      const price = Number.parseFloat(cleanPrice.replace(",", "."));
+      console.log("Precio parseado (coma decimal):", price);
+      return price;
+    }
+
+    // Para números con solo punto decimal
+    if (cleanPrice.match(/^\d+\.\d{1,2}$/)) {
+      const price = Number.parseFloat(cleanPrice);
+      console.log("Precio parseado (punto decimal):", price);
+      return price;
+    }
+
+    // Fallback: intentar parseFloat directo
+    const fallbackPrice = Number.parseFloat(
+      cleanPrice.replace(/[^\d.,]/g, "").replace(",", ".")
+    );
+
+    if (isNaN(fallbackPrice) || fallbackPrice < 0) {
+      console.warn(
+        `Precio inválido: "${priceStr}" -> "${cleanPrice}" -> ${fallbackPrice}`
+      );
+      return 0;
+    }
+
+    console.log("Precio parseado (fallback):", fallbackPrice);
+    return fallbackPrice;
+  };
+
+  // Función mejorada para parsear cantidad
+  const parseQuantity = (quantityStr: string): number => {
+    if (!quantityStr || quantityStr.trim() === "") return 0;
+
+    const cleanQuantity = quantityStr.toString().trim().replace(/[^\d]/g, "");
+    const quantity = Number.parseInt(cleanQuantity) || 0;
+
+    return Math.max(0, quantity);
   };
 
   // Extraer talla del nombre del producto
@@ -156,7 +264,7 @@ export default function ProductImporter() {
     const sizePatterns = [
       /\b(XS|S|M|L|XL|XXL|XXXL)\s*$/i,
       /\b(\d{1,2})\s*$/, // Números como 36, 42, etc.
-      /\b(UNICO|ÚNICA|ONE SIZE)\s*$/i,
+      /\b(UNICO|ÚNICA|ONE SIZE|U)\s*$/i,
     ];
 
     for (const pattern of sizePatterns) {
@@ -239,54 +347,86 @@ export default function ProductImporter() {
       }
     }
 
-    // Por defecto, si no se puede determinar, usar MUJER (basado en el archivo)
+    // Por defecto, si no se puede determinar, usar MUJER
     return "MUJER";
   };
 
-  // Parsear producto del formato específico
+  // Función mejorada para parsear producto del formato específico
   const parseProductFromRow = (
     row: CSVRow,
     headers: string[]
   ): ParsedProduct | null => {
-    // Detectar las columnas principales
+    console.log("Parseando fila:", row);
+    console.log("Headers disponibles:", headers);
+
+    // Buscar columnas específicas con mayor flexibilidad
     const articleColumn =
       headers.find(
         (h) =>
           h.toLowerCase().includes("articulo") ||
           h.toLowerCase().includes("producto") ||
-          h.toLowerCase().includes("nombre")
+          h.toLowerCase().includes("nombre") ||
+          h.toLowerCase().includes("item")
       ) || headers[0];
 
-    const priceColumn = headers.find(
-      (h) =>
-        h.toLowerCase().includes("precio") || h.toLowerCase().includes("price")
-    );
+    const priceColumn =
+      headers.find(
+        (h) =>
+          h.toLowerCase().includes("precio") ||
+          h.toLowerCase().includes("price") ||
+          h.toLowerCase().includes("valor") ||
+          h.toLowerCase().includes("costo")
+      ) ||
+      headers.find((h) => h === "PRECIO") || // Buscar exactamente "PRECIO"
+      headers[2]; // Fallback a tercera columna
 
-    const quantityColumn = headers.find(
-      (h) =>
-        h.toLowerCase().includes("cantidad") ||
-        h.toLowerCase().includes("stock") ||
-        h.toLowerCase().includes("qty")
-    );
+    const quantityColumn =
+      headers.find(
+        (h) =>
+          h.toLowerCase().includes("cantidad") ||
+          h.toLowerCase().includes("stock") ||
+          h.toLowerCase().includes("qty") ||
+          h.toLowerCase().includes("unidades")
+      ) ||
+      headers.find((h) => h === "CANTIDAD") || // Buscar exactamente "CANTIDAD"
+      headers[3]; // Fallback a cuarta columna
+
+    console.log("Columnas detectadas:", {
+      article: articleColumn,
+      price: priceColumn,
+      quantity: quantityColumn,
+    });
 
     const originalName = row[articleColumn]?.trim();
-    if (!originalName) return null;
+    if (!originalName) {
+      console.warn("No se encontró nombre de artículo en la fila");
+      return null;
+    }
 
     // Extraer talla del nombre
     const { name, size } = extractSizeFromName(originalName);
 
-    // Procesar precio
+    // Procesar precio con la función mejorada
     const priceStr = row[priceColumn || ""]?.trim() || "0";
-    const price =
-      Number.parseFloat(priceStr.replace(/[^\d.,]/g, "").replace(",", ".")) ||
-      0;
+    const price = parsePrice(priceStr);
 
-    // Procesar cantidad
+    // Procesar cantidad con la función mejorada
     const quantityStr = row[quantityColumn || ""]?.trim() || "0";
-    const quantity = Number.parseInt(quantityStr) || 0;
+    const quantity = parseQuantity(quantityStr);
 
     // Detectar categoría
     const category = detectCategoryFromName(originalName);
+
+    console.log("Producto parseado:", {
+      name,
+      size,
+      price,
+      quantity,
+      category,
+      originalName,
+      priceStr,
+      quantityStr,
+    });
 
     return {
       name,
@@ -348,11 +488,10 @@ export default function ProductImporter() {
       }
 
       setFile(selectedFile);
-      setAnalyzing(true); // ✅ Iniciar estado de análisis
-      setParsedData(null); // ✅ Limpiar datos previos
+      setAnalyzing(true);
+      setParsedData(null);
 
       try {
-        // ✅ Simular pasos del análisis con pequeñas pausas
         await new Promise((resolve) => setTimeout(resolve, 300));
 
         // Cargar marcas
@@ -372,6 +511,13 @@ export default function ProductImporter() {
         const rows = parseCSV(text, separator);
         const headers = Object.keys(rows[0] || {});
 
+        console.log("Archivo parseado:", {
+          separator,
+          totalRows: rows.length,
+          headers,
+          firstRows: rows.slice(0, 3),
+        });
+
         await new Promise((resolve) => setTimeout(resolve, 400));
 
         setParsedData({
@@ -386,6 +532,7 @@ export default function ProductImporter() {
           description: `Se detectaron ${rows.length} filas. Marca detectada: "${brandName}"`,
         });
       } catch (error) {
+        console.error("Error analizando archivo:", error);
         addToast({
           title: "Error al analizar archivo",
           description: "No se pudo procesar el archivo seleccionado",
@@ -394,7 +541,7 @@ export default function ProductImporter() {
         setFile(null);
         setDetectedBrandName("");
       } finally {
-        setAnalyzing(false); // ✅ Finalizar estado de análisis
+        setAnalyzing(false);
       }
     },
     [addToast]
@@ -435,11 +582,34 @@ export default function ProductImporter() {
         const parsedProduct = parseProductFromRow(row, headers);
 
         if (parsedProduct) {
+          // Validar que el producto tenga datos mínimos
+          if (parsedProduct.price <= 0) {
+            importResult.warnings.push({
+              row: i + 1,
+              message: `Producto "${parsedProduct.originalName}" tiene precio inválido: ${parsedProduct.price}`,
+              data: row,
+            });
+          }
+
+          if (parsedProduct.quantity <= 0) {
+            importResult.warnings.push({
+              row: i + 1,
+              message: `Producto "${parsedProduct.originalName}" tiene cantidad inválida: ${parsedProduct.quantity}`,
+              data: row,
+            });
+          }
+
           const key = parsedProduct.name.toLowerCase();
           if (!productGroups[key]) {
             productGroups[key] = [];
           }
           productGroups[key].push(parsedProduct);
+        } else {
+          importResult.errors.push({
+            row: i + 1,
+            message: "No se pudo parsear el producto de esta fila",
+            data: row,
+          });
         }
       }
 
@@ -478,7 +648,8 @@ export default function ProductImporter() {
           };
 
           console.log(
-            `Creando producto: ${baseProduct.name} con ${productVariants.length} variantes para marca: ${detectedBrandName}`
+            `Creando producto: ${baseProduct.name} con ${productVariants.length} variantes para marca: ${detectedBrandName}`,
+            productData
           );
 
           // Crear producto
@@ -541,10 +712,10 @@ export default function ProductImporter() {
 
   // Descargar plantilla
   const downloadTemplate = () => {
-    const template = `ARTICULO MUJER,,PRECIO,CANTIDAD
-BUZO COTTON NARANJA XL,,33400,1
-REMERA BASICA BLANCA M,,15000,2
-PANTALON JEAN AZUL L,,25000,1`;
+    const template = `ARTICULO,PRECIO,CANTIDAD
+BUZO COTTON NARANJA XL,33.400,1
+REMERA BASICA BLANCA M,15.000,2
+PANTALON JEAN AZUL L,25.000,1`;
 
     const blob = new Blob([template], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -570,10 +741,10 @@ PANTALON JEAN AZUL L,,25000,1`;
           <Alert>
             <FileSpreadsheet className="h-4 w-4" />
             <AlertDescription>
-              <strong>Marca automática:</strong> El sistema usará el nombre del
-              archivo CSV como marca. Por ejemplo, "STOCK_G&C_sport.csv" creará
-              la marca "G&C sport". Los productos incluyen la talla en el nombre
-              y se agruparán automáticamente por variantes.
+              <strong>Formato argentino soportado:</strong> El sistema maneja
+              precios en formato argentino como "18.400", "33.400" donde el
+              punto es separador de miles. También soporta columnas vacías en el
+              CSV.
             </AlertDescription>
           </Alert>
 
@@ -602,23 +773,23 @@ PANTALON JEAN AZUL L,,25000,1`;
                 <span>Plantilla de Ejemplo</span>
               </CardTitle>
               <CardDescription>
-                Descarga una plantilla de ejemplo. Recuerda nombrar tu archivo
-                con el nombre de la marca
+                Descarga una plantilla con formato argentino: precios como
+                "33.400" (punto como separador de miles)
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Button
                 onClick={downloadTemplate}
                 variant="outline"
-                className="cursor-pointer"
+                className="cursor-pointer bg-transparent"
               >
                 <Download className="h-4 w-4 mr-2" />
                 Descargar Plantilla CSV
               </Button>
               <p className="text-sm text-gray-600 mt-2">
-                <strong>Tip:</strong> Nombra tu archivo como
-                "MARCA_PRODUCTOS.csv" para que la marca se detecte
-                automáticamente
+                <strong>Formato soportado:</strong> ARTICULO, PRECIO (ej:
+                18.400), CANTIDAD. El sistema maneja columnas vacías
+                automáticamente.
               </p>
             </CardContent>
           </Card>
@@ -631,8 +802,8 @@ PANTALON JEAN AZUL L,,25000,1`;
                 <span>Seleccionar Archivo</span>
               </CardTitle>
               <CardDescription>
-                Sube tu archivo CSV. El nombre del archivo se usará como marca
-                automáticamente
+                Sube tu archivo CSV. Soporta formato argentino con precios como
+                "18.400"
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -644,7 +815,7 @@ PANTALON JEAN AZUL L,,25000,1`;
                   accept=".csv,.xlsx,.xls"
                   onChange={handleFileSelect}
                   className="mt-1 cursor-pointer"
-                  disabled={analyzing} // ✅ Deshabilitar durante análisis
+                  disabled={analyzing}
                 />
               </div>
 
@@ -667,7 +838,7 @@ PANTALON JEAN AZUL L,,25000,1`;
             </CardContent>
           </Card>
 
-          {/* ✅ Spinner de análisis */}
+          {/* Spinner de análisis */}
           {analyzing && (
             <Card>
               <CardContent className="pt-6">
@@ -757,6 +928,13 @@ PANTALON JEAN AZUL L,,25000,1`;
                                     <strong>Talla:</strong> {parsed.size}
                                   </div>
                                   <div>
+                                    <strong>Precio:</strong> $
+                                    {parsed.price.toLocaleString("es-AR")}
+                                  </div>
+                                  <div>
+                                    <strong>Cantidad:</strong> {parsed.quantity}
+                                  </div>
+                                  <div>
                                     <strong>Categoría:</strong>{" "}
                                     {parsed.category}
                                   </div>
@@ -809,7 +987,6 @@ PANTALON JEAN AZUL L,,25000,1`;
 
         <TabsContent value="results" className="space-y-6">
           {importing ? (
-            // ✅ Spinner mientras se importan los productos
             <Card>
               <CardContent className="pt-6">
                 <div className="flex flex-col items-center justify-center py-12 space-y-6">
@@ -850,7 +1027,6 @@ PANTALON JEAN AZUL L,,25000,1`;
               </CardContent>
             </Card>
           ) : result ? (
-            // ✅ Resultados cuando la importación está completa
             <>
               {/* Resumen */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
