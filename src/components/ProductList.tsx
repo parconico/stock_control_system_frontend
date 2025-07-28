@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import {
@@ -9,7 +10,7 @@ import {
 } from "@/hooks/useStores";
 import { useEffect, useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Edit, Package, Search } from "lucide-react";
+import { Edit, Package, Search, Trash2 } from "lucide-react";
 import { Input } from "./ui/input";
 import {
   Select,
@@ -35,24 +36,42 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { getStockStatus } from "@/lib/utils";
 import { Badge } from "./ui/badge";
-import { Product } from "@/lib/types";
+import type { Product } from "@/lib/types";
 import { Button } from "./ui/button";
 import EditProductModal from "./EditProductModal";
+import { useUI } from "@/hooks/useStores";
 
 export default function ProductList() {
   const products = useProductsList();
   const loading = useProductsLoading();
   const error = useProductsError();
   const filters = useProductsFilters();
-  const { fetchProducts, setFilters } = useProducts();
+  const { fetchProducts, setFilters, deleteProduct } = useProducts();
+  const { addToast } = useUI();
 
   // Estado local para la búsqueda y paginación
   const [localSearch, setLocalSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+  // Estados para el modal de confirmación de eliminación
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const itemsPerPage = 10; // Productos por página
 
   useEffect(() => {
@@ -99,10 +118,61 @@ export default function ProductList() {
     handleCloseEditModal();
   };
 
+  // Funciones para manejar la eliminación de productos
+  const handleDeleteProduct = (product: Product) => {
+    setProductToDelete(product);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteProduct = async () => {
+    if (!productToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      await deleteProduct(productToDelete.id);
+
+      addToast({
+        type: "success",
+        title: "Producto eliminado",
+        description: `El producto "${productToDelete.name}" ha sido eliminado correctamente.`,
+      });
+
+      // Refrescar la lista de productos
+      await fetchProducts();
+
+      // Si estamos en una página que ya no tiene productos, volver a la anterior
+      const totalItemsAfterDelete = products.length - 1;
+      const maxPageAfterDelete = Math.ceil(
+        totalItemsAfterDelete / itemsPerPage
+      );
+      if (currentPage > maxPageAfterDelete && maxPageAfterDelete > 0) {
+        setCurrentPage(maxPageAfterDelete);
+      }
+    } catch (error: any) {
+      addToast({
+        type: "error",
+        title: "Error al eliminar producto",
+        description:
+          error.message ||
+          "No se pudo eliminar el producto. Inténtalo de nuevo.",
+      });
+    } finally {
+      setIsDeleting(false);
+      setIsDeleteDialogOpen(false);
+      setProductToDelete(null);
+    }
+  };
+
+  const cancelDeleteProduct = () => {
+    setIsDeleteDialogOpen(false);
+    setProductToDelete(null);
+  };
+
   // Filtrado local de productos según búsqueda
   const filteredProducts = useMemo(() => {
     const search = localSearch.trim().toLowerCase();
     if (!search) return products;
+
     const words = search.split(/\s+/).filter(Boolean);
     return products.filter((product) => {
       const fields = [
@@ -112,6 +182,7 @@ export default function ProductList() {
         product.category?.toLowerCase() || "",
         product.color?.toLowerCase() || "",
       ];
+
       return words.every((word) =>
         fields.some((field) => field.includes(word))
       );
@@ -255,7 +326,6 @@ export default function ProductList() {
               <p className="text-red-800">{error}</p>
             </div>
           )}
-
           {/* Información de paginación */}
           {totalItems > 0 && (
             <div className="mb-4 text-sm text-muted-foreground">
@@ -289,6 +359,7 @@ export default function ProductList() {
                       0
                     ) ??
                     0;
+
                   const stockStatus = getStockStatus(
                     totalStock,
                     product.minStock
@@ -357,18 +428,19 @@ export default function ProductList() {
                             size="sm"
                             onClick={() => handleEditProduct(product)}
                             className="h-8 w-8 p-0 cursor-pointer"
+                            title="Editar producto"
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
-                          {/* Botón de eliminar (opcional) */}
-                          {/* <Button
+                          <Button
                             variant="outline"
                             size="sm"
                             onClick={() => handleDeleteProduct(product)}
-                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 cursor-pointer"
+                            title="Eliminar producto"
                           >
                             <Trash2 className="h-4 w-4" />
-                          </Button> */}
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -442,6 +514,7 @@ export default function ProductList() {
           )}
         </CardContent>
       </Card>
+
       {/* Modal de edición */}
       <EditProductModal
         product={editingProduct}
@@ -449,6 +522,94 @@ export default function ProductList() {
         onClose={handleCloseEditModal}
         onProductUpdated={handleProductUpdated}
       />
+
+      {/* Modal de confirmación de eliminación */}
+      <AlertDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center space-x-2">
+              <Trash2 className="h-5 w-5 text-red-600" />
+              <span>Confirmar eliminación</span>
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Estás seguro de que deseas eliminar el producto &quot;
+              {productToDelete?.name}&quot;?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          {/* Contenido adicional fuera del AlertDialogDescription */}
+          <div className="space-y-3">
+            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
+              <div className="flex items-start space-x-2">
+                <div className="text-yellow-600 mt-0.5">⚠️</div>
+                <div className="text-sm text-yellow-800">
+                  <div className="font-medium mb-1">Esta acción:</div>
+                  <ul className="list-disc list-inside space-y-1">
+                    <li>Eliminará el producto permanentemente</li>
+                    <li>Eliminará todas sus variantes de talla</li>
+                    <li>No se puede deshacer</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            {productToDelete && (
+              <div className="bg-gray-50 border border-gray-200 rounded-md p-3">
+                <div className="text-sm text-gray-700 space-y-1">
+                  <div>
+                    <strong>Marca:</strong> {productToDelete.brand?.name}
+                  </div>
+                  <div>
+                    <strong>Código:</strong> {productToDelete.barcode}
+                  </div>
+                  <div>
+                    <strong>Precio:</strong> $
+                    {productToDelete.price.toLocaleString()}
+                  </div>
+                  <div>
+                    <strong>Stock total:</strong>{" "}
+                    {productToDelete.variants?.reduce(
+                      (sum, variant) => sum + variant.stock,
+                      0
+                    ) || 0}{" "}
+                    unidades
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={cancelDeleteProduct}
+              disabled={isDeleting}
+              className="cursor-pointer"
+            >
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeleteProduct}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700 focus:ring-red-600 cursor-pointer"
+            >
+              {isDeleting ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Eliminando...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Eliminar Producto
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
