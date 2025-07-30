@@ -25,8 +25,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useProducts, useUI } from "@/hooks/useStores";
 import { brandsApi } from "@/lib/api";
-import type { Product, ProductVariantInput } from "@/lib/types";
-import { SIZE_OPTIONS } from "@/lib/types";
+import type { Category, Product, ProductVariantInput } from "@/lib/types";
+import { CATEGORY_OPTIONS, SIZE_OPTIONS } from "@/lib/types";
 import { Loader2, Package, Plus, Trash2, Edit3 } from "lucide-react";
 
 interface EditProductModalProps {
@@ -55,6 +55,7 @@ export default function EditProductModal({
     brandId: "",
     barcode: "",
     color: "",
+    category: "",
     price: "",
     cost: "",
     minStock: "",
@@ -72,6 +73,7 @@ export default function EditProductModal({
         brandId: product.brandId || "",
         barcode: product.barcode || "",
         color: product.color || "",
+        category: product.category || "",
         price: product.price?.toString() || "",
         cost: product.cost?.toString() || "",
         minStock: product.minStock?.toString() || "",
@@ -228,6 +230,7 @@ export default function EditProductModal({
         brandId: formData.brandId,
         barcode: formData.barcode,
         color: formData.color.trim() || undefined,
+        category: formData.category as Category,
         price: Number.parseFloat(formData.price),
         cost: Number.parseFloat(formData.cost),
         minStock: Number.parseInt(formData.minStock),
@@ -262,6 +265,7 @@ export default function EditProductModal({
       brandId: "",
       barcode: "",
       color: "",
+      category: "",
       price: "",
       cost: "",
       minStock: "",
@@ -307,19 +311,13 @@ export default function EditProductModal({
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Información no editable */}
           <Card className="bg-gray-50">
-            <CardContent className="pt-4">
+            <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                 <div>
                   <Label className="text-xs text-muted-foreground">
                     Género
                   </Label>
                   <Badge variant="outline">{product.gender}</Badge>
-                </div>
-                <div>
-                  <Label className="text-xs text-muted-foreground">
-                    Categoría
-                  </Label>
-                  <p>{product.category}</p>
                 </div>
               </div>
             </CardContent>
@@ -381,6 +379,26 @@ export default function EditProductModal({
                 onChange={(e) => handleInputChange("color", e.target.value)}
                 placeholder="Color del producto"
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="category">Categoria</Label>
+              <Select
+                value={formData.category}
+                onValueChange={(value) => handleInputChange("category", value)}
+                // disabled={loadingBrands}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={formData.category} />
+                </SelectTrigger>
+                <SelectContent>
+                  {CATEGORY_OPTIONS.map((cat) => (
+                    <SelectItem key={cat.value} value={cat.value}>
+                      {cat.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
@@ -533,10 +551,11 @@ export default function EditProductModal({
               variant="outline"
               onClick={handleClose}
               disabled={loading}
+              className="cursor-pointer"
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading} className="cursor-pointer">
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {loading ? "Actualizando..." : "Actualizar Producto"}
             </Button>
