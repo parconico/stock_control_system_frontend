@@ -48,7 +48,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { getStockStatus } from "@/lib/utils";
 import { Badge } from "./ui/badge";
-import type { Product } from "@/lib/types";
+import { CATEGORY_OPTIONS, GENDER_OPTIONS, type Product } from "@/lib/types";
 import { Button } from "./ui/button";
 import EditProductModal from "./EditProductModal";
 import { useUI } from "@/hooks/useStores";
@@ -292,10 +292,14 @@ export default function ProductList() {
               <SelectTrigger className="w-full sm:w-[180px]">
                 <SelectValue placeholder="Filtrar por género" />
               </SelectTrigger>
+
               <SelectContent>
                 <SelectItem value="all">Todos los géneros</SelectItem>
-                <SelectItem value="HOMBRE">Hombre</SelectItem>
-                <SelectItem value="MUJER">Mujer</SelectItem>
+                {GENDER_OPTIONS.map((gen) => (
+                  <SelectItem key={gen.value} value={gen.value}>
+                    {gen.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <Select
@@ -306,16 +310,12 @@ export default function ProductList() {
                 <SelectValue placeholder="Filtrar por categoría" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todas las categorías</SelectItem>
-                <SelectItem value="BUZO">Buzo</SelectItem>
-                <SelectItem value="CAMPERA">Campera</SelectItem>
-                <SelectItem value="PANTALON">Pantalón</SelectItem>
-                <SelectItem value="REMERA">Remera</SelectItem>
-                <SelectItem value="MEDIAS">Medias</SelectItem>
-                <SelectItem value="GORRA">Gorra</SelectItem>
-                <SelectItem value="BOTELLA">Botella</SelectItem>
-                <SelectItem value="RINONERA">Riñonera</SelectItem>
-                <SelectItem value="OTROS">Otros</SelectItem>
+                <SelectItem value="all">Todas las categorias</SelectItem>
+                {CATEGORY_OPTIONS.map((cat) => (
+                  <SelectItem key={cat.value} value={cat.value}>
+                    {cat.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
