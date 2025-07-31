@@ -26,7 +26,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useProducts, useUI } from "@/hooks/useStores";
 import { brandsApi } from "@/lib/api";
 import type { Category, Product, ProductVariantInput } from "@/lib/types";
-import { CATEGORY_OPTIONS, SIZE_OPTIONS } from "@/lib/types";
+import { CATEGORY_OPTIONS, GENDER_OPTIONS, SIZE_OPTIONS } from "@/lib/types";
 import { Loader2, Package, Plus, Trash2, Edit3 } from "lucide-react";
 
 interface EditProductModalProps {
@@ -52,6 +52,7 @@ export default function EditProductModal({
 
   const [formData, setFormData] = useState({
     name: "",
+    gender: "",
     brandId: "",
     barcode: "",
     color: "",
@@ -70,6 +71,7 @@ export default function EditProductModal({
     if (product && isOpen) {
       setFormData({
         name: product.name || "",
+        gender: product.gender || "",
         brandId: product.brandId || "",
         barcode: product.barcode || "",
         color: product.color || "",
@@ -227,6 +229,7 @@ export default function EditProductModal({
     try {
       const updateData = {
         name: formData.name,
+        gender: formData.gender as "HOMBRE" | "MUJER" | "UNISEX",
         brandId: formData.brandId,
         barcode: formData.barcode,
         color: formData.color.trim() || undefined,
@@ -262,6 +265,7 @@ export default function EditProductModal({
   const resetForm = () => {
     setFormData({
       name: "",
+      gender: "",
       brandId: "",
       barcode: "",
       color: "",
@@ -310,7 +314,7 @@ export default function EditProductModal({
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Información no editable */}
-          <Card className="bg-gray-50">
+          {/* <Card className="bg-gray-50">
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                 <div>
@@ -321,7 +325,7 @@ export default function EditProductModal({
                 </div>
               </div>
             </CardContent>
-          </Card>
+          </Card> */}
 
           {/* Campos editables */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -335,6 +339,7 @@ export default function EditProductModal({
                 required
               />
             </div>
+
             <div className="space-y-2">
               <Label htmlFor="barcode">Código de Barras *</Label>
               <Input
@@ -345,6 +350,25 @@ export default function EditProductModal({
                 className="font-mono"
                 required
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="gender">Género</Label>
+              <Select
+                value={formData.gender}
+                onValueChange={(value) => handleInputChange("gender", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={formData.category} />
+                </SelectTrigger>
+                <SelectContent>
+                  {GENDER_OPTIONS.map((gen) => (
+                    <SelectItem key={gen.value} value={gen.value}>
+                      {gen.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
