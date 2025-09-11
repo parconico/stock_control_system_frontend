@@ -55,6 +55,10 @@ export interface Sale {
   product?: Product;
   quantity: number;
   unitPrice: number;
+  subtotal: number;
+  discountType?: "PERCENTAGE" | "FIXED_AMOUNT";
+  discountValue?: number;
+  discountAmount?: number;
   totalPrice: number;
   paymentMethod:
     | "EFECTIVO"
@@ -126,6 +130,10 @@ export interface CreateSaleForm {
   size?: string;
   quantity: number;
   unitPrice: number;
+  subtotal: number;
+  discountType?: "PERCENTAGE" | "FIXED_AMOUNT";
+  discountValue?: number;
+  discountAmount?: number;
   totalPrice: number;
   saleDate?: string;
 }
@@ -243,6 +251,11 @@ export const PAYMENT_METHOD_OPTIONS = [
   { value: "QR", label: "Código QR" },
 ] as const;
 
+export const DISCOUNT_TYPE_OPTIONS = [
+  { value: "PERCENTAGE", label: "Porcentaje (%)" },
+  { value: "FIXED_AMOUNT", label: "Monto fijo ($)" },
+] as const;
+
 export interface StockMovement {
   id: string;
   productId: string;
@@ -261,4 +274,24 @@ export interface StockMovementFilters extends PaginationParams {
   type?: "IN" | "OUT" | "ADJUSTMENT";
   startDate?: string;
   endDate?: string;
+}
+
+//Interfaces para el carrito con descuentos
+// Interfaces para el carrito con descuentos
+export interface CartItem {
+  product: Product;
+  quantity: number;
+  selectedSize?: string;
+  unitPrice: number;
+  subtotal: number;
+  discountType?: "PERCENTAGE" | "FIXED_AMOUNT";
+  discountValue?: number;
+  discountAmount?: number;
+  totalPrice: number;
+}
+
+export interface CartDiscount {
+  type: "PERCENTAGE" | "FIXED_AMOUNT";
+  value: number;
+  amount: number;
 }

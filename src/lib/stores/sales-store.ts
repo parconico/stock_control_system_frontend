@@ -1,12 +1,24 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import { salesApi } from "@/lib/api";
-import type { Sale, SaleFilters, CreateSaleForm, Product } from "@/lib/types";
+import type {
+  Sale,
+  SaleFilters,
+  CreateSaleForm,
+  Product,
+  CartDiscount,
+} from "@/lib/types";
 
 interface CartItem {
   product: Product;
   quantity: number;
-  selectedSize?: string; // Agregamos esta propiedad para la talla seleccionada
+  selectedSize?: string;
+  unitPrice: number;
+  subtotal: number;
+  discountType?: "PERCENTAGE" | "FIXED_AMOUNT";
+  discountValue?: number;
+  discountAmount?: number;
+  totalPrice: number;
 }
 
 interface SalesState {
@@ -24,19 +36,27 @@ interface SalesState {
 }
 
 interface SalesActions {
+  // Operaciones básicas
   fetchSales: (filters?: SaleFilters) => Promise<void>;
   createSale: (data: CreateSaleForm) => Promise<Sale>;
+  setFilters: (filters: Partial<SaleFilters>) => void;
+  clearFilters: () => void;
+  setLoading: (loading: boolean) => void;
+  setError: (error: string | null) => void;
+  clearError: () => void;
+
+  // Operaciones de carrito
   addToCart: (
     product: Product,
     quantity: number,
     selectedSize?: string
-  ) => void; // Modificado para aceptar selectedSize
-  removeFromCart: (productId: string, selectedSize?: string) => void; // Modificado para aceptar selectedSize
+  ) => void;
+  removeFromCart: (productId: string, selectedSize?: string) => void;
   updateCartQuantity: (
     productId: string,
     quantity: number,
     selectedSize?: string
-  ) => void; // Modificado para aceptar selectedSize
+  ) => void;
   clearCart: () => void;
   processCart: (
     paymentMethod:
@@ -46,12 +66,21 @@ interface SalesActions {
       | "TARJETA_CREDITO"
       | "QR"
   ) => Promise<void>;
-  setFilters: (filters: Partial<SaleFilters>) => void;
-  clearFilters: () => void;
-  setLoading: (loading: boolean) => void;
-  setError: (error: string | null) => void;
-  clearError: () => void;
+
+  // Funciones de descuento
+  applyDiscountToItem: (
+    productId: string,
+    selectedSize: string | undefined,
+    discount: CartDiscount
+  ) => void;
+  removeDiscountFromItem: (productId: string, selectedSize?: string) => void;
+  applyGlobalDiscount: (discount: CartDiscount) => void;
+  removeGlobalDiscount: () => void;
+
+  // Cálculos
   getCartTotal: () => number;
+  getCartSubtotal: () => number;
+  getCartDiscountAmount: () => number;
   getCartItemCount: () => number;
 }
 
@@ -65,7 +94,7 @@ export const useSalesStore = create<SalesState & SalesActions>()(
     filters: {},
     meta: null,
 
-    // Acciones
+    // Operaciones básicas
     fetchSales: async (filters?: SaleFilters) => {
       set((state) => {
         state.loading = true;
@@ -144,7 +173,38 @@ export const useSalesStore = create<SalesState & SalesActions>()(
         throw new Error(errorMessage);
       }
     },
-    // Modificado para aceptar selectedSize
+
+    setFilters: (filters: Partial<SaleFilters>) => {
+      set((state) => {
+        state.filters = { ...state.filters, ...filters };
+      });
+    },
+
+    clearFilters: () => {
+      set((state) => {
+        state.filters = {};
+      });
+    },
+
+    setLoading: (loading: boolean) => {
+      set((state) => {
+        state.loading = loading;
+      });
+    },
+
+    setError: (error: string | null) => {
+      set((state) => {
+        state.error = error;
+      });
+    },
+
+    clearError: () => {
+      set((state) => {
+        state.error = null;
+      });
+    },
+
+    // Operaciones de carrito
     addToCart: (product: Product, quantity: number, selectedSize?: string) => {
       console.log("🛒 Intentando agregar al carrito:", {
         productId: product.id,
@@ -192,6 +252,9 @@ export const useSalesStore = create<SalesState & SalesActions>()(
           const newQuantity = existingItem.quantity + quantity;
           if (newQuantity <= maxStockForSize) {
             existingItem.quantity = newQuantity;
+            existingItem.subtotal = newQuantity * existingItem.unitPrice;
+            existingItem.totalPrice =
+              existingItem.subtotal - (existingItem.discountAmount || 0);
             console.log("✅ Cantidad actualizada en carrito:", newQuantity);
           } else {
             state.error = `Solo hay ${maxStockForSize} unidades disponibles de ${
@@ -209,11 +272,20 @@ export const useSalesStore = create<SalesState & SalesActions>()(
                 product.variants?.reduce((sum, v) => sum + v.stock, 0) ||
                 0,
             };
-            state.cart.push({
+
+            const unitPrice = product.price;
+            const subtotal = quantity * unitPrice;
+
+            const newItem: CartItem = {
               product: productWithStock,
               quantity,
               selectedSize,
-            });
+              unitPrice,
+              subtotal,
+              totalPrice: subtotal,
+            };
+
+            state.cart.push(newItem);
             console.log("✅ Producto agregado al carrito");
           } else {
             state.error = `Solo hay ${maxStockForSize} unidades disponibles de ${
@@ -234,7 +306,7 @@ export const useSalesStore = create<SalesState & SalesActions>()(
         }
       });
     },
-    // Modificado para aceptar selectedSize
+
     removeFromCart: (productId: string, selectedSize?: string) => {
       set((state) => {
         state.cart = state.cart.filter(
@@ -251,7 +323,7 @@ export const useSalesStore = create<SalesState & SalesActions>()(
         );
       });
     },
-    // Modificado para aceptar selectedSize
+
     updateCartQuantity: (
       productId: string,
       quantity: number,
@@ -292,6 +364,8 @@ export const useSalesStore = create<SalesState & SalesActions>()(
 
           if (quantity <= maxStockForSize) {
             item.quantity = quantity;
+            item.subtotal = quantity * item.unitPrice;
+            item.totalPrice = item.subtotal - (item.discountAmount || 0);
             console.log("📝 Cantidad actualizada:", quantity);
             state.error = null; // Limpiar error si la actualización fue exitosa
           } else {
@@ -303,6 +377,7 @@ export const useSalesStore = create<SalesState & SalesActions>()(
         }
       });
     },
+
     clearCart: () => {
       set((state) => {
         state.cart = [];
@@ -310,6 +385,7 @@ export const useSalesStore = create<SalesState & SalesActions>()(
         console.log("🧹 Carrito limpiado");
       });
     },
+
     processCart: async (
       paymentMethod:
         | "EFECTIVO"
@@ -343,17 +419,24 @@ export const useSalesStore = create<SalesState & SalesActions>()(
           console.log(`📦 Procesando item ${i + 1}/${cart.length}:`, {
             productName: item.product.name,
             quantity: item.quantity,
-            price: item.product.price,
-            selectedSize: item.selectedSize, // Log the selected size
+            unitPrice: item.unitPrice,
+            subtotal: item.subtotal,
+            discountAmount: item.discountAmount,
+            totalPrice: item.totalPrice,
+            selectedSize: item.selectedSize,
             paymentMethod: paymentMethod,
           });
 
           const saleData: CreateSaleForm = {
             productId: item.product.id,
-            size: item.selectedSize, // Usar la talla seleccionada del item del carrito
+            size: item.selectedSize,
             quantity: item.quantity,
-            unitPrice: item.product.price,
-            totalPrice: item.product.price * item.quantity,
+            unitPrice: item.unitPrice,
+            subtotal: item.subtotal,
+            discountType: item.discountType,
+            discountValue: item.discountValue,
+            discountAmount: item.discountAmount,
+            totalPrice: item.totalPrice,
             paymentMethod: paymentMethod,
           };
           console.log("📋 Datos de venta a enviar:", saleData);
@@ -385,38 +468,125 @@ export const useSalesStore = create<SalesState & SalesActions>()(
         throw new Error(errorMessage);
       }
     },
-    setFilters: (filters: Partial<SaleFilters>) => {
+
+    // Funciones de descuento
+    applyDiscountToItem: (
+      productId: string,
+      selectedSize: string | undefined,
+      discount: CartDiscount
+    ) => {
       set((state) => {
-        state.filters = { ...state.filters, ...filters };
+        const item = state.cart.find(
+          (item) =>
+            item.product.id === productId && item.selectedSize === selectedSize
+        );
+        if (!item) return;
+
+        let discountAmount = 0;
+
+        if (discount.type === "PERCENTAGE") {
+          discountAmount = (item.subtotal * discount.value) / 100;
+        } else {
+          discountAmount = Math.min(discount.value, item.subtotal);
+        }
+
+        item.discountType = discount.type;
+        item.discountValue = discount.value;
+        item.discountAmount = discountAmount;
+        item.totalPrice = item.subtotal - discountAmount;
+
+        console.log("🏷️ Descuento aplicado al item:", {
+          productId,
+          selectedSize,
+          discountType: discount.type,
+          discountValue: discount.value,
+          discountAmount,
+          newTotalPrice: item.totalPrice,
+        });
       });
     },
-    clearFilters: () => {
+
+    removeDiscountFromItem: (productId: string, selectedSize?: string) => {
       set((state) => {
-        state.filters = {};
+        const item = state.cart.find(
+          (item) =>
+            item.product.id === productId && item.selectedSize === selectedSize
+        );
+        if (!item) return;
+
+        item.discountType = undefined;
+        item.discountValue = undefined;
+        item.discountAmount = undefined;
+        item.totalPrice = item.subtotal;
+
+        console.log("🗑️ Descuento removido del item:", {
+          productId,
+          selectedSize,
+        });
       });
     },
-    setLoading: (loading: boolean) => {
+
+    applyGlobalDiscount: (discount: CartDiscount) => {
       set((state) => {
-        state.loading = loading;
+        state.cart.forEach((item) => {
+          let discountAmount = 0;
+
+          if (discount.type === "PERCENTAGE") {
+            discountAmount = (item.subtotal * discount.value) / 100;
+          } else {
+            // Para descuento fijo global, dividir entre todos los items
+            discountAmount = Math.min(
+              discount.value / state.cart.length,
+              item.subtotal
+            );
+          }
+
+          item.discountType = discount.type;
+          item.discountValue = discount.value;
+          item.discountAmount = discountAmount;
+          item.totalPrice = item.subtotal - discountAmount;
+        });
+
+        console.log("🌍 Descuento global aplicado:", {
+          discountType: discount.type,
+          discountValue: discount.value,
+          itemsAffected: state.cart.length,
+        });
       });
     },
-    setError: (error: string | null) => {
+
+    removeGlobalDiscount: () => {
       set((state) => {
-        state.error = error;
+        state.cart.forEach((item) => {
+          item.discountType = undefined;
+          item.discountValue = undefined;
+          item.discountAmount = undefined;
+          item.totalPrice = item.subtotal;
+        });
+
+        console.log("🗑️ Descuento global removido");
       });
     },
-    clearError: () => {
-      set((state) => {
-        state.error = null;
-      });
+
+    // Cálculos
+    getCartSubtotal: () => {
+      const { cart } = get();
+      return cart.reduce((total, item) => total + item.subtotal, 0);
     },
-    getCartTotal: () => {
+
+    getCartDiscountAmount: () => {
       const { cart } = get();
       return cart.reduce(
-        (total, item) => total + item.product.price * item.quantity,
+        (total, item) => total + (item.discountAmount || 0),
         0
       );
     },
+
+    getCartTotal: () => {
+      const { cart } = get();
+      return cart.reduce((total, item) => total + item.totalPrice, 0);
+    },
+
     getCartItemCount: () => {
       const { cart } = get();
       return cart.reduce((total, item) => total + item.quantity, 0);

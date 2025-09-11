@@ -2,7 +2,6 @@
 "use client";
 
 import type React from "react";
-
 import { useProducts, useSales, useUI } from "@/hooks/useStores";
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,7 +17,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./ui/select";
-import { PAYMENT_METHOD_OPTIONS } from "@/lib/types";
+import { PAYMENT_METHOD_OPTIONS, DISCOUNT_TYPE_OPTIONS } from "@/lib/types";
+import { formatCurrency } from "@/lib/utils";
 
 interface BarcodeScannerProps {
   onSaleComplete: () => void;
@@ -27,11 +27,18 @@ interface BarcodeScannerProps {
 export default function BarcodeScanner({
   onSaleComplete,
 }: BarcodeScannerProps) {
-  // ✅ useState para estado LOCAL del formulario
+  // Estados locales del formulario
   const [barcode, setBarcode] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [selectedSize, setSelectedSize] = useState<string>("");
   const [paymentMethod, setPaymentMethod] = useState<string>("EFECTIVO");
+
+  // Estados para descuentos
+  const [discountType, setDiscountType] = useState<
+    "PERCENTAGE" | "FIXED_AMOUNT"
+  >("PERCENTAGE");
+  const [discountValue, setDiscountValue] = useState("");
+  const [hasDiscount, setHasDiscount] = useState(false);
 
   // Zustand para estado global
   const {
@@ -49,9 +56,10 @@ export default function BarcodeScanner({
 
     try {
       const product = await fetchProductByBarcode(barcode);
-
-      // ✅ Limpiar selección de talla anterior
       setSelectedSize("");
+      // Limpiar descuentos al escanear nuevo producto
+      setHasDiscount(false);
+      setDiscountValue("");
 
       addToast({
         type: "success",
@@ -67,10 +75,72 @@ export default function BarcodeScanner({
     }
   };
 
+  // Calcular precios con descuento
+  const calculatePrices = () => {
+    if (!selectedProduct) return { subtotal: 0, discountAmount: 0, total: 0 };
+
+    const subtotal = selectedProduct.price * quantity;
+    let discountAmount = 0;
+
+    if (hasDiscount && discountValue && Number.parseFloat(discountValue) > 0) {
+      const discount = Number.parseFloat(discountValue);
+      if (discountType === "PERCENTAGE") {
+        discountAmount = (subtotal * discount) / 100;
+      } else {
+        discountAmount = Math.min(discount, subtotal);
+      }
+    }
+
+    const total = subtotal - discountAmount;
+
+    return { subtotal, discountAmount, total };
+  };
+
+  const { subtotal, discountAmount, total } = calculatePrices();
+
+  const handleApplyDiscount = () => {
+    const value = Number.parseFloat(discountValue);
+    if (isNaN(value) || value <= 0) {
+      addToast({
+        type: "warning",
+        title: "Valor inválido",
+        description: "Ingresa un valor válido para el descuento",
+      });
+      return;
+    }
+
+    if (discountType === "PERCENTAGE" && value > 100) {
+      addToast({
+        type: "warning",
+        title: "Descuento inválido",
+        description: "El porcentaje no puede ser mayor a 100%",
+      });
+      return;
+    }
+
+    setHasDiscount(true);
+    addToast({
+      type: "success",
+      title: "Descuento aplicado",
+      description: `Descuento de ${
+        discountType === "PERCENTAGE" ? `${value}%` : formatCurrency(value)
+      } aplicado`,
+    });
+  };
+
+  const handleRemoveDiscount = () => {
+    setHasDiscount(false);
+    setDiscountValue("");
+    addToast({
+      type: "info",
+      title: "Descuento removido",
+      description: "El descuento ha sido removido",
+    });
+  };
+
   const handleSale = async () => {
     if (!selectedProduct || quantity <= 0) return;
 
-    // ✅ Calcular stock total y validar talla seleccionada
     const totalStock =
       selectedProduct.totalStock ||
       selectedProduct.variants?.reduce(
@@ -79,7 +149,6 @@ export default function BarcodeScanner({
       ) ||
       0;
 
-    // Si el producto tiene variantes, debe seleccionar una talla
     if (
       selectedProduct.variants &&
       selectedProduct.variants.length > 0 &&
@@ -93,7 +162,6 @@ export default function BarcodeScanner({
       return;
     }
 
-    // Validar stock de la talla específica si está seleccionada
     let availableStock = totalStock;
     if (selectedSize && selectedProduct.variants) {
       const selectedVariant = selectedProduct.variants.find(
@@ -114,26 +182,34 @@ export default function BarcodeScanner({
     }
 
     try {
-      await createSale({
+      const saleData = {
         productId: selectedProduct.id,
         size: selectedSize || undefined,
         quantity,
         unitPrice: selectedProduct.price,
-        totalPrice: selectedProduct.price * quantity,
+        subtotal: subtotal,
+        discountType: hasDiscount ? discountType : undefined,
+        discountValue: hasDiscount ? Number.parseFloat(discountValue) : 0,
+        discountAmount: hasDiscount ? discountAmount : 0,
+        totalPrice: total,
         paymentMethod: paymentMethod as
           | "EFECTIVO"
           | "TRANSFERENCIA"
           | "TARJETA_DEBITO"
           | "TARJETA_CREDITO"
           | "QR",
-      });
+      };
+
+      await createSale(saleData);
 
       addToast({
         type: "success",
         title: "Venta registrada",
         description: `${quantity} x ${selectedProduct.name}${
           selectedSize ? ` (${selectedSize})` : ""
-        } - $${(selectedProduct.price * quantity).toLocaleString()}`,
+        } - ${formatCurrency(total)}${
+          hasDiscount ? ` (Descuento: ${formatCurrency(discountAmount)})` : ""
+        }`,
       });
 
       // Limpiar formulario
@@ -141,6 +217,8 @@ export default function BarcodeScanner({
       setBarcode("");
       setQuantity(1);
       setSelectedSize("");
+      setHasDiscount(false);
+      setDiscountValue("");
       onSaleComplete();
     } catch (error: any) {
       addToast({
@@ -159,7 +237,6 @@ export default function BarcodeScanner({
 
   const isLoading = productLoading || saleLoading;
 
-  // ✅ Calcular stock disponible para la talla seleccionada
   const getAvailableStock = () => {
     if (!selectedProduct) return 0;
 
@@ -240,8 +317,8 @@ export default function BarcodeScanner({
 
               <div className="space-y-2">
                 <p>
-                  <strong>Precio:</strong> $
-                  {selectedProduct.price.toLocaleString()}
+                  <strong>Precio:</strong>{" "}
+                  {formatCurrency(selectedProduct.price)}
                 </p>
                 <p>
                   <strong>Stock total:</strong>{" "}
@@ -259,7 +336,7 @@ export default function BarcodeScanner({
               </div>
             </div>
 
-            {/* ✅ Selector de tallas */}
+            {/* Selector de tallas */}
             {selectedProduct.variants &&
               selectedProduct.variants.length > 0 && (
                 <div className="border-t pt-4 space-y-3">
@@ -301,7 +378,7 @@ export default function BarcodeScanner({
                 </div>
               )}
 
-            {/* ✅ Información de talla seleccionada */}
+            {/* Información de talla seleccionada */}
             {selectedSize && (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                 <div className="flex items-center justify-between">
@@ -315,9 +392,97 @@ export default function BarcodeScanner({
               </div>
             )}
 
+            {/* Sección de descuentos */}
             <div className="border-t pt-4">
-              <div className="flex items-center space-x-4">
-                <div className="flex items-center space-x-2">
+              <Label className="text-sm font-medium mb-3 block">
+                Aplicar Descuento (Opcional)
+              </Label>
+
+              {hasDiscount ? (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-green-700 font-medium">
+                      ✓ Descuento aplicado:{" "}
+                      {discountType === "PERCENTAGE"
+                        ? `${discountValue}%`
+                        : formatCurrency(Number.parseFloat(discountValue))}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleRemoveDiscount}
+                      className="text-xs bg-transparent"
+                    >
+                      Quitar
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-2">
+                    <Select
+                      value={discountType}
+                      onValueChange={(value: "PERCENTAGE" | "FIXED_AMOUNT") =>
+                        setDiscountType(value)
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {DISCOUNT_TYPE_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      type="number"
+                      placeholder="Valor"
+                      value={discountValue}
+                      onChange={(e) => setDiscountValue(e.target.value)}
+                      min="0"
+                      step="0.01"
+                    />
+                  </div>
+                  <Button
+                    onClick={handleApplyDiscount}
+                    disabled={
+                      !discountValue || Number.parseFloat(discountValue) <= 0
+                    }
+                    className="w-full cursor-pointer bg-transparent"
+                    variant="outline"
+                  >
+                    Aplicar Descuento
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {/* Resumen de precios */}
+            <div className="border-t pt-4">
+              <div className="space-y-2 mb-4">
+                <div className="flex justify-between text-sm">
+                  <span>Subtotal:</span>
+                  <span>{formatCurrency(subtotal)}</span>
+                </div>
+                {hasDiscount && discountAmount > 0 && (
+                  <div className="flex justify-between text-sm text-green-600">
+                    <span>Descuento:</span>
+                    <span>-{formatCurrency(discountAmount)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between font-semibold text-lg border-t pt-2">
+                  <span>Total:</span>
+                  <span className="text-green-600">
+                    {formatCurrency(total)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                <div>
                   <Label htmlFor="quantity" className="text-sm font-medium">
                     Cantidad:
                   </Label>
@@ -330,14 +495,12 @@ export default function BarcodeScanner({
                     onChange={(e) =>
                       setQuantity(Number.parseInt(e.target.value) || 1)
                     }
-                    className="w-20"
+                    className="w-full"
                   />
                 </div>
 
-                <div className="mb-3">
-                  <label className="block text-sm font-medium mb-1">
-                    Método de pago
-                  </label>
+                <div>
+                  <Label className="text-sm font-medium">Método de pago:</Label>
                   <Select
                     value={paymentMethod}
                     onValueChange={setPaymentMethod}
@@ -355,13 +518,6 @@ export default function BarcodeScanner({
                   </Select>
                 </div>
 
-                <div className="flex-1">
-                  <p className="text-lg font-semibold">
-                    Total: $
-                    {(selectedProduct.price * quantity).toLocaleString()}
-                  </p>
-                </div>
-
                 <Button
                   onClick={handleSale}
                   disabled={
@@ -372,7 +528,7 @@ export default function BarcodeScanner({
                       selectedProduct.variants.length > 0 &&
                       !selectedSize)
                   }
-                  className="flex items-center space-x-2 cursor-pointer"
+                  className="flex items-center justify-center space-x-2 cursor-pointer"
                 >
                   <ShoppingCart className="h-4 w-4" />
                   <span>
@@ -385,7 +541,7 @@ export default function BarcodeScanner({
         </Card>
       )}
 
-      {/* ✅ Mensaje cuando no se encuentra producto */}
+      {/* Mensaje cuando no se encuentra producto */}
       {productError && (
         <Card>
           <CardContent className="flex items-center justify-center py-8">
