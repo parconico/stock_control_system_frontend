@@ -30,17 +30,29 @@ import {
   QrCode,
   ChevronDown,
   ChevronUp,
+  Undo2,
 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn, formatCurrency } from "@/lib/utils";
 import { PAYMENT_METHOD_OPTIONS } from "@/lib/types";
 import { useSales, useUI } from "@/hooks/useStores";
+import { salesApi } from "@/lib/api";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function SalesDetail() {
   const { sales, loading, fetchSales } = useSales();
@@ -54,6 +66,9 @@ export default function SalesDetail() {
   const [startDateOpen, setStartDateOpen] = useState(false);
   const [endDateOpen, setEndDateOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [processingReturn, setProcessingReturn] = useState<string | null>(null);
+  const [saleToReturn, setSaleToReturn] = useState<string | null>(null);
+  const [isReturnDialogOpen, setIsReturnDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchSales({
@@ -150,6 +165,59 @@ export default function SalesDetail() {
       title: "Exportación exitosa",
       description: "El archivo CSV se ha descargado correctamente",
     });
+  };
+
+  const openReturnDialog = (saleId: string) => {
+    setSaleToReturn(saleId);
+    setIsReturnDialogOpen(true);
+  };
+
+  const closeReturnDialog = () => {
+    setIsReturnDialogOpen(false);
+    setSaleToReturn(null);
+  };
+
+  const handleReturn = async () => {
+    if (!saleToReturn) return;
+
+    setProcessingReturn(saleToReturn);
+    setIsReturnDialogOpen(false);
+
+    try {
+      await salesApi.returnSale(saleToReturn);
+
+      addToast({
+        type: "success",
+        title: "Devolución procesada",
+        description:
+          "La venta ha sido devuelta y el stock ha sido reintegrado correctamente",
+      });
+
+      // Refrescar las ventas
+      await fetchSales({
+        page: 1,
+        limit: 99999,
+        startDate: startDate ? format(startDate, "yyyy-MM-dd") : undefined,
+        endDate: endDate ? format(endDate, "yyyy-MM-dd") : undefined,
+      });
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error && "response" in error
+          ? (error as { response?: { data?: { message?: string } } }).response
+              ?.data?.message
+          : undefined;
+
+      addToast({
+        type: "error",
+        title: "Error al procesar devolución",
+        description:
+          errorMessage ||
+          "No se pudo procesar la devolución. Inténtalo de nuevo.",
+      });
+    } finally {
+      setProcessingReturn(null);
+      setSaleToReturn(null);
+    }
   };
 
   const totalRevenue = filteredSales.reduce(
@@ -515,10 +583,41 @@ export default function SalesDetail() {
                         <span>{getPaymentMethodLabel(sale.paymentMethod)}</span>
                       </div>
                       <div className="text-right">
-                        <p className="font-bold text-green-600">
+                        <p
+                          className={cn(
+                            "font-bold",
+                            sale.isReturned
+                              ? "text-red-600 line-through"
+                              : "text-green-600"
+                          )}
+                        >
                           {formatCurrency(sale.totalPrice)}
                         </p>
+                        {sale.isReturned && (
+                          <span className="text-xs text-red-600">Devuelta</span>
+                        )}
                       </div>
+                      {!sale.isReturned && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openReturnDialog(sale.id)}
+                          disabled={processingReturn === sale.id}
+                          className="cursor-pointer text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                        >
+                          {processingReturn === sale.id ? (
+                            <>
+                              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-orange-600 mr-1"></div>
+                              <span className="text-xs">Procesando...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Undo2 className="h-3 w-3 mr-1" />
+                              <span className="text-xs">Devolución</span>
+                            </>
+                          )}
+                        </Button>
+                      )}
                     </div>
                   </div>
 
@@ -582,6 +681,34 @@ export default function SalesDetail() {
                         {sale.notes}
                       </p>
                     )}
+
+                    {/* Botón de devolución o estado devuelta */}
+                    {sale.isReturned ? (
+                      <div className="flex items-center justify-center p-2 bg-red-50 border border-red-200 rounded text-xs text-red-600 font-medium">
+                        <Undo2 className="h-3 w-3 mr-1" />
+                        Venta devuelta
+                      </div>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openReturnDialog(sale.id)}
+                        disabled={processingReturn === sale.id}
+                        className="w-full cursor-pointer text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                      >
+                        {processingReturn === sale.id ? (
+                          <>
+                            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-orange-600 mr-2"></div>
+                            Procesando devolución...
+                          </>
+                        ) : (
+                          <>
+                            <Undo2 className="h-4 w-4 mr-2" />
+                            Procesar Devolución
+                          </>
+                        )}
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))
@@ -589,6 +716,56 @@ export default function SalesDetail() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Dialog de confirmación de devolución */}
+      <AlertDialog
+        open={isReturnDialogOpen}
+        onOpenChange={setIsReturnDialogOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center space-x-2">
+              <Undo2 className="h-5 w-5 text-orange-600" />
+              <span>Confirmar Devolución</span>
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Estás seguro de que deseas procesar esta devolución?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="space-y-3">
+            <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+              <div className="flex items-start space-x-2">
+                <div className="text-blue-600 mt-0.5">ℹ️</div>
+                <div className="text-sm text-blue-800">
+                  <div className="font-medium mb-1">Esta acción:</div>
+                  <ul className="list-disc list-inside space-y-1">
+                    <li>Marcará la venta como devuelta</li>
+                    <li>Reintegrará el stock automáticamente</li>
+                    <li>Registrará un movimiento de entrada</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={closeReturnDialog}
+              className="cursor-pointer"
+            >
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleReturn}
+              className="bg-orange-600 hover:bg-orange-700 focus:ring-orange-600 cursor-pointer"
+            >
+              <Undo2 className="h-4 w-4 mr-2" />
+              Procesar Devolución
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

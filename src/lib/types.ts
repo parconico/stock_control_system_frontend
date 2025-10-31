@@ -68,6 +68,8 @@ export interface Sale {
     | "QR";
   saleDate: string;
   notes?: string;
+  isReturned: boolean;
+  returnDate?: string;
   createdAt: string;
   updatedAt: string;
 }

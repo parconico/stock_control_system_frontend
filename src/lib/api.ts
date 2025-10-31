@@ -136,6 +136,11 @@ export const salesApi = {
     const response = await api.post("/sales", data);
     return response.data;
   },
+
+  returnSale: async (id: string): Promise<Sale> => {
+    const response = await api.post(`/sales/${id}/return`);
+    return response.data;
+  },
 };
 
 // API de Usuarios
